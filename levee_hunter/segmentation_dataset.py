@@ -4,6 +4,7 @@ import numpy as np
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+import warnings
 
 
 class SegmentationDataset(Dataset):
@@ -42,9 +43,10 @@ class SegmentationDataset(Dataset):
             image = images[image_no]
             target = targets[image_no]
 
-            # range(start, stop, step)
-            for i in range(0, image.shape[0], stride):
-                for j in range(0, image.shape[1], stride):
+            # Notice since image = images[image_no], its shape is 2d
+            # Loop to cover entire image
+            for i in range(0, max(image.shape[0] - patch_size, 0) + 1, stride):
+                for j in range(0, max(image.shape[1] - patch_size, 0) + 1, stride):
 
                     # For given image:
                     # Divide the image into (patch_size, patch_size) patches
@@ -54,6 +56,12 @@ class SegmentationDataset(Dataset):
                     # Pad to (final_size, final_size)
                     pad_h = final_size - smaller_image.shape[0]
                     pad_w = final_size - smaller_image.shape[1]
+
+                    if (pad_h > 0 or pad_w > 0) and patch_size == final_size:
+                        warnings.warn(
+                            f"Padding ({pad_h}, {pad_w}) was added, but patch_size == final_size. "
+                            "This may be unintended and could affect training."
+                        )
 
                     smaller_image = torch.tensor(smaller_image, dtype=torch.float32)
                     smaller_target = torch.tensor(smaller_target, dtype=torch.float32)
