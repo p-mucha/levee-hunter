@@ -1,0 +1,1 @@
+This is data found by Marco during week 3 (before 12.02.2025), to test resolutions.
