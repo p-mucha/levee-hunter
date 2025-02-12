@@ -6,10 +6,12 @@ import numpy as np
 from shapely.geometry import box
 import geopandas as gpd
 
+
 def get_mask(
-    tif_image: xarray.DataArray, 
-    levees: gpd.GeoDataFrame, 
-    invert: bool = False
+    tif_image: xarray.DataArray,
+    levees: gpd.GeoDataFrame,
+    invert: bool = False,
+    dilation_size: int = 10,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Given a tif image and a geopandas dataframe of levees, return the image and the mask.
@@ -18,6 +20,7 @@ def get_mask(
     - tif_image: A rioxarray DataArray containing the raster data.
     - levees: A GeoDataFrame containing levee geometries.
     - invert: If True, inverts the mask.
+    - dilation_size: Size of the kernel used for thickening levee lines (default=10).
 
     Returns:
     - A tuple containing:
@@ -42,8 +45,10 @@ def get_mask(
     )
 
     # Thicken the white lines using binary dilation
-    structure = np.ones((15, 15), dtype=bool)  # Defines the dilation kernel
-    thickened_raster = binary_dilation(levee_raster, structure=structure).astype(np.uint8)
+    structure = np.ones((dilation_size, dilation_size), dtype=bool)
+    thickened_raster = binary_dilation(levee_raster, structure=structure).astype(
+        np.uint8
+    )
 
     if invert:
         thickened_raster = 1 - thickened_raster
