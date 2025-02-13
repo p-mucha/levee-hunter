@@ -1,0 +1,1 @@
+This is data found by marco during week 4, (13/02/2025 to be precise). This was right after testing different resolutions in notebook 1.4 and training new model on 1m resolution data in notebook 1.5. Addition of this new data should allow to train a better model. 
