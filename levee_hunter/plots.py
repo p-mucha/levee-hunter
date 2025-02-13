@@ -14,12 +14,13 @@ def infer_and_visualize(model, image_tensor, mask_tensor, apply_sigmoid=True):
     else:
         with torch.no_grad():
             output = model(image_tensor.unsqueeze(0))
-            output = np.array(output).reshape(256, 256)
+            output = output.squeeze()
+            output = np.array(output)
 
     plt.figure(figsize=(10, 5))
     plt.subplot(1, 3, 1)
     plt.title("Original Image")
-    plt.imshow(image_tensor.reshape(256, 256))
+    plt.imshow(image_tensor.squeeze())
 
     plt.subplot(1, 3, 2)
     plt.title("Prediction")
@@ -28,7 +29,7 @@ def infer_and_visualize(model, image_tensor, mask_tensor, apply_sigmoid=True):
     plt.subplot(1, 3, 3)
     plt.title("Target Mask")
     plt.imshow(
-        mask_tensor.reshape(256, 256),
+        mask_tensor.squeeze(),
         cmap=ListedColormap(["white", "black"]),
         vmin=0,
         vmax=1,
