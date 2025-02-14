@@ -131,6 +131,24 @@ class SegmentationDataset(Dataset):
                 self.images += [empty_images[i] for i in selected_indices]
                 self.targets += [empty_targets[i] for i in selected_indices]
 
+    def remove_invalid_images(self):
+        """
+        Removes images where the minimum pixel value is less than -9999,
+        along with their corresponding targets.
+        This might happen if data is missing in a given region.
+        Basically this function allows (after splitting large image into smaller ones),
+        to keep some parts of the original image even if there are parts missing on it,
+        while removing any smaller images that might contain those missing parts.
+        """
+        images = np.array(self.images)
+
+        # Find indices where the min value in the image is >= -9999 (valid images)
+        valid_indices = np.where(np.min(images, axis=(1, 2, 3)) >= -9999)[0]
+
+        # Keep only valid images and their corresponding targets
+        self.images = [self.images[i] for i in valid_indices]
+        self.targets = [self.targets[i] for i in valid_indices]
+
     def __single_plot(self, idx, transform, figsize):
 
         fig, axes = plt.subplots(1, 2, figsize=figsize)  # 1 row, 2 columns
