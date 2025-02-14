@@ -3,9 +3,9 @@
 
 ## Installation
 
-To install Levee Hunter, follow these steps:
+To install Levee Hunter, clone this repository and install:
 
-### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/p-mucha/levee-hunter.git
 
