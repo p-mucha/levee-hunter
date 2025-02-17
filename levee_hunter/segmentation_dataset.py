@@ -4,6 +4,7 @@ import numpy as np
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+from sklearn.model_selection import train_test_split
 import warnings
 
 
@@ -29,6 +30,8 @@ class SegmentationDataset(Dataset):
         self.transform = transform
         self.empty_images = None
         self.empty_targets = None
+        self.weights = None
+        self.weights_return = False
 
     def split_and_pad(self, images, targets, patch_size, final_size, overlap):
         """Splits the image and mask into smaller patches and pads them."""
@@ -238,5 +241,13 @@ class SegmentationDataset(Dataset):
             image.shape[1] == image.shape[2]
         ), f"Image is not square. Shape: {image.shape}"
         assert image.shape == target.shape, "Image and target shapes do not match."
+
+        if self.weights_return:
+            if self.weights is None:
+                raise ValueError(
+                    "Error: `return_weights=True` but `weights` is None. "
+                    "Provide a valid weights array when initializing the dataset."
+                )
+            return image, target, self.weights[idx]
 
         return image, target
