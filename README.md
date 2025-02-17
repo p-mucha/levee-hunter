@@ -12,3 +12,6 @@ git clone https://github.com/p-mucha/levee-hunter.git
 cd levee-hunter
 
 pip install -e .
+```
+
+A useful tutorial notebook is located inside the tutorial/ directory.
