@@ -6,6 +6,8 @@ import numpy as np
 
 def infer_and_visualize(model, image_tensor, mask_tensor, apply_sigmoid=True):
 
+    model.eval()
+
     if apply_sigmoid:
         with torch.no_grad():
             output = model(image_tensor.unsqueeze(0))
@@ -67,4 +69,19 @@ def plot_img_and_target(img, target, figsize=(12, 6)):
     axes[1].axis("off")
 
     plt.tight_layout()
+    plt.show()
+
+
+def plot_training_validation_loss(train_loss_list, val_loss_list):
+    # Plot training and validation loss
+    epochs_range = range(1, len(train_loss_list) + 1)
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(epochs_range, train_loss_list, label="Train Loss")
+    plt.plot(epochs_range, val_loss_list, label="Validation Loss")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.title("Training and Validation Loss over Epochs")
+    plt.legend()
+    plt.grid(True)
     plt.show()
