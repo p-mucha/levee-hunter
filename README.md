@@ -15,3 +15,9 @@ pip install -e .
 ```
 
 A useful tutorial notebook is located inside the tutorial/ directory.
+
+
+## Getting Data
+
+All data files can be found on Hypatia at:
+`/share/gpu5/pmucha/fathom/levee-hunter/data/`
