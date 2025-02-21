@@ -26,16 +26,12 @@ All data files can be found on Hypatia at:
 ## Recreating Environment on Hypatia
 Those instructions only apply when using conda, as other environment managers might be hard to use on the Hypatia cluster.
 
-Since on the Hypatia cluster's instructions, it is only mentioned how to use conda and not miniconda, we need to suffer through the fact that base conda has countless packages in it, making the environment solver slow and often resulting in failures. 
-
-The way around this is to use mamba. 
-
 First we need to activate conda:
 ```
 source /share/apps/anaconda/3-2019.03/etc/profile.d/conda.sh
 ```
 
-Now one could use the conda to recreate the environment accordint to environment.yml, which will probably take ages and eventually fail, due to conda being conda.
+Now one could use conda to recreate the environment from environment.yml, but it might be slow.
 
 Instead, we will create an environment with just the mamba in it for now. 
 
