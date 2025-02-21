@@ -25,3 +25,7 @@ data/**
 models/**
 !models/**/*.md
 !models/**/*.gitkeep
+
+
+scripts/**
+notebooks/_jobs/**
