@@ -4,15 +4,21 @@ from matplotlib.colors import ListedColormap
 import numpy as np
 
 
-def infer_and_visualize(model, image_tensor, mask_tensor, apply_sigmoid=True):
+def infer_and_visualize(
+    model, image_tensor, mask_tensor, apply_sigmoid=True, threshold=0.5
+):
 
     model.eval()
+
+    # Convert image to tensor if it is not already
+    if not isinstance(image_tensor, torch.Tensor):
+        image_tensor = torch.Tensor(image_tensor)
 
     if apply_sigmoid:
         with torch.no_grad():
             output = model(image_tensor.unsqueeze(0))
             output = torch.sigmoid(output).cpu().squeeze().numpy()
-            output = (output > 0.5).astype(np.uint8)
+            output = (output > threshold).astype(np.uint8)
     else:
         with torch.no_grad():
             output = model(image_tensor.unsqueeze(0))
