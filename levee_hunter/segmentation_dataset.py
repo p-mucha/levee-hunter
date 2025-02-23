@@ -15,15 +15,24 @@ class SegmentationDataset(Dataset):
         targets,
         transform=None,
         split=False,
-        patch_size=250,
-        final_size=256,
+        patch_size=None,
+        final_size=None,
         overlap=0,
     ):
         if split:
+            if patch_size is None or final_size is None:
+                raise ValueError(
+                    "Error: `patch_size` and `final_size` must be provided when `split=True`."
+                )
             self.images, self.targets = self.split_and_pad(
                 images, targets, patch_size, final_size, overlap
             )
         else:
+            if patch_size is not None or final_size is not None:
+                warnings.warn(
+                    "Warning: `patch_size` and `final_size` are provided but `split=False`. "
+                    "These parameters will be ignored."
+                )
             self.images = images
             self.targets = targets
 
