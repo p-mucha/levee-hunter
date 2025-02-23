@@ -5,7 +5,7 @@ import numpy as np
 
 
 def infer_and_visualize(
-    model, image_tensor, mask_tensor, apply_sigmoid=True, threshold=0.5
+    model, image_tensor, mask_tensor, apply_sigmoid=True, threshold=0.5, device=None
 ):
 
     model.eval()
@@ -13,6 +13,14 @@ def infer_and_visualize(
     # Convert image to tensor if it is not already
     if not isinstance(image_tensor, torch.Tensor):
         image_tensor = torch.Tensor(image_tensor)
+
+    # Convert image to tensor if it is not already
+    if not isinstance(mask_tensor, torch.Tensor):
+        mask_tensor = torch.Tensor(mask_tensor)
+
+    if device is not None:
+        image_tensor = image_tensor.to(device)
+        mask_tensor = mask_tensor.to(device)
 
     if apply_sigmoid:
         with torch.no_grad():
@@ -22,13 +30,17 @@ def infer_and_visualize(
     else:
         with torch.no_grad():
             output = model(image_tensor.unsqueeze(0))
-            output = output.squeeze()
-            output = np.array(output)
+            output = output.squeeze().cpu().numpy()
 
     plt.figure(figsize=(10, 5))
     plt.subplot(1, 3, 1)
     plt.title("Original Image")
-    plt.imshow(image_tensor.squeeze())
+
+    # At this point this is tensor of shape (1, N, N)
+    # Squeeze the tensor
+    # Also it might be on cuda, for plotting we move to cpu
+    # Otherwise, matplotlib will throw an error
+    plt.imshow(image_tensor.cpu().squeeze())
 
     plt.subplot(1, 3, 2)
     plt.title("Prediction")
@@ -37,7 +49,7 @@ def infer_and_visualize(
     plt.subplot(1, 3, 3)
     plt.title("Target Mask")
     plt.imshow(
-        mask_tensor.squeeze(),
+        mask_tensor.squeeze().cpu(),
         cmap=ListedColormap(["white", "black"]),
         vmin=0,
         vmax=1,
