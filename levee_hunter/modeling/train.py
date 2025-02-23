@@ -12,7 +12,7 @@ def train_model(
     optimizer,
     criterion=nn.BCEWithLogitsLoss(reduction="none"),
     epochs=10,
-    save_model=True,
+    save_model="best",
     save_model_path=None,
 ):
     if not isinstance(train_loader.dataset, SegmentationDataset):
@@ -20,6 +20,9 @@ def train_model(
 
     if not isinstance(val_loader.dataset, SegmentationDataset):
         raise ValueError("val_loader.dataset must be a SegmentationDataset instance")
+
+    if save_model not in ["best", "last"]:
+        raise ValueError("save_model must be either 'best' or 'last'")
 
     best_loss = float("inf")
 
@@ -108,7 +111,7 @@ def train_model(
             f"Epoch: {epoch+1}/{epochs} Train Loss: {train_loss:.6f} Val Loss: {val_loss:.6f}"
         )
 
-        if save_model:
+        if save_model == "best":
             if val_loss < best_loss:
                 best_loss = val_loss
 
@@ -117,6 +120,9 @@ def train_model(
                 # there are multiple models saved (model_A, model_B, ...), during
                 # single training run
                 save_model_path = save_model_correctly(model, save_model_path)
+
+    if save_model == "last":
+        save_model_path = save_model_correctly(model, save_model_path)
 
     model_architecture = model.__class__.__name__
     encoder_name = model.encoder.__class__.__name__
