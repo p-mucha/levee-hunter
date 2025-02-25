@@ -6,6 +6,10 @@ from time import sleep
 import pandas as pd
 import json
 import argparse
+import warnings
+import geopandas as gpd
+from shapely.geometry import box
+import numpy as np
 
 # https://apps.nationalmap.gov/tnmaccess/#/product
 
@@ -59,11 +63,14 @@ def query_geodata(datasets, prodFormats, bbox=""):
         res = response.json()
         print(res['messages'][0])
         if res["total"]>len(res["items"]):
-            raise Warning(f"Query returns {res['total']} items, exceeding the limit of {len(res['items'])}. Consider to descrease the cell size.")
+            warnings.warn(f"Query returns {res['total']} items, exceeding the limit of {len(res['items'])}. Consider to descrease the cell size.")
         return res
+    #except UserWarning as w:
+    #    print(w)
     except Exception as e:
-        print(e)
-        print("Something went wrong. | Response:", response.text)
+        print("Something went wrong:", e)
+        print(" | Request:", request_str)
+        print(" | Response:", response.text)
         return None
 
 def download_geotiff(url, download_path):
@@ -77,9 +84,6 @@ def chunker(lst, chunksize):
         yield lst[i : i + chunksize]
 
 def make_task_list(cell_size, levee_path, bbox = []):
-    import geopandas as gpd
-    from shapely.geometry import box
-    import numpy as np
 
     def divide(total_bounds, length):
         xs = np.arange(total_bounds[0] + length/2, total_bounds[2], step=length)
@@ -115,7 +119,7 @@ def run():
     parser.add_argument("-o", "--outputPath", type=str, default="Downloads", help="Path to the folder for downloaded files")
     parser.add_argument("-b", "--totalBounds", type=float, nargs=4, help="Total bounds of the area to download: xmin ymin xmax ymax. E.g. -121.58826 37.96628 -120.51895 39.01853")
     parser.add_argument("--dryRun", action="store_true", default=False, help="Dry run, send queries but no download")
-    parser.add_argument("--cellSize", type=float, default=0.5, help="Cell size for the grid when dividing downloading task")
+    parser.add_argument("--cellSize", type=float, default=0.5, help="Cell size for the grid when dividing downloading task. Will be ignored if --taskList is provided.")
     parser.add_argument("--chunkSize", type=int, default=10, help="Number of queries to send in each downloading batch")
     parser.add_argument("--nJobs", type=int, default=2, help="Number of parallel download jobs")
     args = parser.parse_args()
