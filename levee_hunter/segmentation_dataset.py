@@ -7,6 +7,8 @@ from matplotlib.colors import ListedColormap
 from sklearn.model_selection import train_test_split
 import warnings
 
+import levee_hunter.augmentations as lhAug
+
 
 class SegmentationDataset(Dataset):
     def __init__(
@@ -18,6 +20,8 @@ class SegmentationDataset(Dataset):
         patch_size=None,
         final_size=None,
         overlap=0,
+        weights=None,
+        file_ids=None,
     ):
         if split:
             if patch_size is None or final_size is None:
@@ -37,10 +41,25 @@ class SegmentationDataset(Dataset):
             self.targets = targets
 
         self.transform = transform
+        if self.transform not in [
+            "train_transform",
+            "no_deformations_transform",
+            "normalize_only",
+        ]:
+            FutureWarning(
+                "transform should be a string, this will be changed in the future"
+            )
         self.empty_images = None
         self.empty_targets = None
-        self.weights = None
+
+        # For weighted training
+        self.weights = weights
         self.weights_return = False
+
+        # Keep track which file each image originated from
+        self.file_ids = file_ids
+
+        self.overlap = overlap
 
     def split_and_pad(self, images, targets, patch_size, final_size, overlap):
         """Splits the image and mask into smaller patches and pads them."""
@@ -220,6 +239,95 @@ class SegmentationDataset(Dataset):
     def shape(self):
         return np.array(self.images).shape
 
+    def __add__(self, other):
+        """
+        Concatenates two datasets.
+        """
+        if not isinstance(other, SegmentationDataset):
+            raise ValueError("Error: Can only concatenate SegmentationDataset objects.")
+
+        # Check if weights are consistent
+        if self.weights is not None and other.weights is not None:
+            if isinstance(self.weights, np.ndarray) and isinstance(
+                other.weights, np.ndarray
+            ):
+                self.weights = np.concatenate((self.weights, other.weights), axis=0)
+
+            elif isinstance(self.weights, torch.Tensor) and isinstance(
+                other.weights, torch.Tensor
+            ):
+                self.weights = torch.cat((self.weights, other.weights), dim=0)
+
+            elif isinstance(self.weights, list) and isinstance(other.weights, list):
+                self.weights += other.weights
+
+            else:
+                raise TypeError(
+                    f"Error: Mismatched weight types ({type(self.weights)} vs {type(other.weights)})."
+                )
+
+        # give error if weights are provided for one dataset but not the other
+        elif (
+            self.weights is not None
+            and other.weights is None
+            or self.weights is None
+            and other.weights is not None
+        ):
+            raise ValueError(
+                "Error: Weights are provided for one dataset but not the other."
+            )
+
+        # Check if transforms are consistent
+        # Give error if transforms are not the same
+        if self.transform != other.transform:
+            raise ValueError("Error: Transforms are different for the two datasets.")
+
+        # Check if file_ids are consistent
+        # Give error if one dataset has file_ids and the other doesn't
+        if (
+            self.file_ids is None
+            and other.file_ids is not None
+            or self.file_ids is not None
+            and other.file_ids is None
+        ):
+            raise ValueError(
+                "Error: `file_ids` are provided for one dataset but not the other."
+            )
+
+        # This is kind of simplified, but lets assume both have the same type
+        # If they are numpy arrays, just concatenate them
+        # If they are lists, then add them
+        if self.file_ids is not None and other.file_ids is not None:
+            if isinstance(self.file_ids, np.ndarray) and isinstance(
+                other.file_ids, np.ndarray
+            ):
+                self.file_ids = np.concatenate((self.file_ids, other.file_ids), axis=0)
+
+            else:
+                self.file_ids = self.file_ids + other.file_ids
+
+        # Handle images now, if they are numpy arrays, just concatenate
+        # If they are not, then try to add them, as they should be lists
+        # Additionally, we will assume targets are the same type as images
+        # Otherwise something weird has happened
+        if isinstance(self.images, np.ndarray) and isinstance(other.images, np.ndarray):
+            if len(self.images.shape) == 2:
+                self.images = self.images.reshape(1, *self.images.shape)
+                self.targets = self.targets.reshape(1, *self.targets.shape)
+
+            if len(other.images.shape) == 2:
+                other.images = other.images.reshape(1, *other.images.shape)
+                other.targets = other.targets.reshape(1, *other.targets.shape)
+
+            self.images = np.concatenate((self.images, other.images), axis=0)
+            self.targets = np.concatenate((self.targets, other.targets), axis=0)
+
+        else:
+            self.images = self.images + other.images
+            self.targets = self.targets + other.targets
+
+        return self
+
     def __len__(self):
         return len(self.images)
 
@@ -229,14 +337,26 @@ class SegmentationDataset(Dataset):
         # But then we want tensors of shape (1, N, N) as outputs
         # So convert back to tensors and reshape
         if self.transform and not self.is_array:
-            self.to_array()
+            image = np.array(self.images[idx])
+            target = np.array(self.targets[idx])
 
-        image = self.images[idx]
-        target = self.targets[idx]
+        else:
+            image = self.images[idx]
+            target = self.targets[idx]
 
         if self.transform:
             N = image.shape[1]
-            augmented = self.transform(image=image, mask=target)
+
+            # Handle string versions of transforms
+            if self.transform == "train_transform":
+                augmented = lhAug.train_transform(image=image, mask=target)
+            elif self.transform == "no_deformations_transform":
+                augmented = lhAug.no_deformations_transform(image=image, mask=target)
+            elif self.transform == "normalize_only":
+                augmented = lhAug.normalize_only(image=image, mask=target)
+            else:
+                augmented = self.transform(image=image, mask=target)
+
             image = augmented["image"]
             target = augmented["mask"]
 
