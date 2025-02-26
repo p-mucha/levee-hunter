@@ -133,3 +133,31 @@ def count_files_by_state(conn, state):
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM files WHERE state = ?", (state,))
     return cursor.fetchone()[0]
+
+
+def delete_database(db_path):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("DROP TABLE IF EXISTS files")
+
+    conn.commit()
+    conn.close()
+
+
+def create_database(db_path):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Create the files table (if not exists)
+    cursor.execute(
+        """
+    CREATE TABLE IF NOT EXISTS files (
+        file_id TEXT PRIMARY KEY,
+        path TEXT NOT NULL,
+        state TEXT NOT NULL CHECK (state IN ('unused', 'validation', 'train_test'))
+    )
+    """
+    )
+
+    conn.commit()
