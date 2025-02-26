@@ -37,6 +37,13 @@ def find_project_root(max_depth=4):
     return None  # If no valid root is found within `max_depth`
 
 
+def check_if_file_exists(file_path):
+    if file_path.exists():
+        return True
+    else:
+        return False
+
+
 def get_unique_model_path(base_path):
     """Generates a unique model path by appending A, B, C... if needed."""
     base_dir = base_path.parent

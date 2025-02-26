@@ -1,5 +1,10 @@
 import albumentations as A
 
+# Important Note:
+# When you add new transform, it also should be added to segmentation_dataset
+# in the __init__ method and in __getitem__ method.
+
+
 # Define augmentations
 train_transform = A.Compose(
     [
