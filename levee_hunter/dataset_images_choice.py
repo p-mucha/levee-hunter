@@ -1,12 +1,14 @@
+import atexit
+import geopandas as gpd
+from IPython.display import clear_output, display
+import matplotlib.pyplot as plt
+import numpy as np
+import os
 import rioxarray
 import sqlite3
-import os
-import geopandas as gpd
+import sys
+import time
 import torch
-import ipywidgets as widgets
-from IPython.display import display, clear_output
-import numpy as np
-from pathlib import Path
 
 from levee_hunter.database_management import get_files_by_state, move_file_state
 from levee_hunter.get_mask import get_mask
@@ -15,13 +17,15 @@ from levee_hunter.augmentations import train_transform, normalize_only
 from levee_hunter.paths import find_project_root, check_if_file_exists
 
 
-def load_and_split(current_file_name, levees_data, data_dir, size, overlap):
+def load_and_split(
+    current_file_name, levees_data, data_dir, size, overlap, dilation_size
+):
     current_file_path = os.path.join(data_dir, current_file_name)
 
     img = rioxarray.open_rasterio(current_file_path)
 
     lidar_data, target = get_mask(
-        img, levees_data.to_crs(img.rio.crs), invert=True, dilation_size=20
+        img, levees_data.to_crs(img.rio.crs), invert=True, dilation_size=dilation_size
     )
 
     if len(target.shape) == 2:
@@ -44,198 +48,83 @@ def load_and_split(current_file_name, levees_data, data_dir, size, overlap):
 
 
 def interactive_dataset_creation(
-    db_path, levees_file_path, resolution="1m", size=1056, overlap=26
+    db_path, levees_file_path, resolution="1m", size=1056, overlap=26, dilation_s=0
 ):
-    import time
-    import sqlite3
-    import ipywidgets as widgets
-    from IPython.display import display, clear_output
-    import torch
-    import numpy as np
-    import geopandas as gpd
+    """
+    A text-based interactive workflow for splitting images into train_test,
+    validation, or discarding (bad) images. Prompts the user via 'input()'
+    rather than GUI buttons, so it can run in a console (e.g. on an HPC cluster).
+    """
 
+    # Safety check for resolution
     if resolution not in ["1m", "13"]:
         raise ValueError("Resolution must be either '1m' or '13'.")
 
-    tifs_path = find_project_root() / f"data/raw/w4-Lidar/{resolution}_resolution"
+    # Prepare paths
+    tifs_path = find_project_root() / f"data/raw/{resolution}_resolution"
 
     # Database lock
     conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA locking_mode = EXCLUSIVE;")
     conn.commit()
 
-    # Fetch unused
-    unused_files = get_files_by_state(conn, "unused")
+    # Ensure database is unlocked when the script exits (even on errors)
+    def release_db_lock():
+        print("Releasing database lock (using release_db_lock)...")
+        conn.close()
 
+    # Register cleanup function to always run on exit
+    atexit.register(release_db_lock)
+
+    # Some state variables
     temp_selected_parts = []
     special_selected_parts = []
     file_index = 0
     part_index = 0
     current_file_id = None
     selected_list = None
-    process_active = True
+
+    # Datasets
     parts_dataset = None
     good_dataset = None
     bad_dataset = None
 
+    # Load levees data
     levees_data = gpd.read_file(levees_file_path)
 
-    output = widgets.Output()
+    # -----------------------------------------------------
+    # Helper functions
+    def finalize_output():
+        print("Process finished.")
 
-    # Define the button variables in the outer scope:
-    train_test_button = None
-    validation_button = None
-    keep_button = None
-    special_button = None
-    remove_button = None
-    quit_button = None
-
-    def create_buttons():
-        nonlocal train_test_button, validation_button
-        nonlocal keep_button, special_button, remove_button, quit_button
-
-        # File selection stage
-        train_test_button = widgets.Button(description="Train/Test")
-        validation_button = widgets.Button(description="Validation")
-        train_test_button.on_click(on_choose_train_test)
-        validation_button.on_click(on_choose_validation)
-
-        # Part selection stage
-        keep_button = widgets.Button(description="Keep")
-        special_button = widgets.Button(description="Special")
-        remove_button = widgets.Button(description="Remove")
-        keep_button.on_click(on_keep_clicked)
-        special_button.on_click(on_special_clicked)
-        remove_button.on_click(on_remove_clicked)
-
-        # Quit
-        quit_button = widgets.Button(description="Quit")
-        quit_button.on_click(on_quit)
-
-    def update_display():
-        with output:
-            clear_output(wait=True)
-
-            if not process_active:
-                print("Process has been quit. No further selections will be made.")
-                return
-
-            if file_index < len(unused_files):
-                file_id, filename = unused_files[file_index]
-                print(f"Processing file {file_index + 1}/{len(unused_files)}:")
-                print(f"📂 File ID: {file_id}")
-                print(f"📄 Filename: {filename}")
-
-                create_buttons()
-
-                if selected_list is None:
-                    print("\nChoose an option:")
-                    display(
-                        widgets.VBox(
-                            [train_test_button, validation_button, quit_button]
-                        )
-                    )
-                else:
-                    print(f"🆔 File ID Part {part_index + 1}/{len(parts_dataset)}")
-                    parts_dataset.plot(part_index, figsize=(6, 6))
-                    display(
-                        widgets.VBox(
-                            [keep_button, special_button, remove_button, quit_button]
-                        )
-                    )
-            else:
-                print("Finished processing all files.")
-
-    def on_choose_train_test(b):
-        nonlocal selected_list, current_file_id, part_index, parts_dataset
-        selected_list = "train_test"
-        with output:
-            clear_output(wait=True)
-            output.append_stdout("Started Processing...\n")
-        current_file_id = unused_files[file_index][0]
-        move_file_state(conn, current_file_id, "train_test")
-        current_file_name = unused_files[file_index][1]
-        output.append_stdout(f"Selected file: {current_file_name}\n")
-
-        parts_dataset = load_and_split(
-            current_file_name,
-            levees_data,
-            data_dir=tifs_path,
-            size=size,
-            overlap=overlap,
-        )
-        with output:
-            output.append_stdout(
-                f"Finished Processing. Number of image parts: {len(parts_dataset)}\n"
-            )
-        time.sleep(3)
-        part_index = 0
-        update_display()
-
-    def on_choose_validation(b):
-        nonlocal selected_list, current_file_id, part_index, parts_dataset
-        selected_list = "validation"
-        current_file_id = unused_files[file_index][0]
-        move_file_state(conn, current_file_id, "validation")
-        current_file_name = unused_files[file_index][1]
-        parts_dataset = load_and_split(
-            current_file_name,
-            levees_data,
-            data_dir=tifs_path,
-            size=size,
-            overlap=overlap,
-        )
-        part_index = 0
-        update_display()
-
-    def on_keep_clicked(b):
-        nonlocal part_index
-        if part_index < len(parts_dataset):
-            temp_selected_parts.append(part_index)
-        next_part()
-
-    def on_special_clicked(b):
-        nonlocal part_index
-        if part_index < len(parts_dataset):
-            temp_selected_parts.append(part_index)
-            special_selected_parts.append(part_index)
-        next_part()
-
-    def on_remove_clicked(b):
-        next_part()
-
-    def on_quit(b):
-        nonlocal process_active
+    def revert_file_to_unused():
+        """If a file is partially processed, revert it back to 'unused'."""
+        nonlocal current_file_id
         if selected_list is not None and current_file_id is not None:
             print(f"Reverting file {current_file_id} back to 'unused'...")
             move_file_state(conn, current_file_id, "unused")
 
-        process_active = False
-        finalize_output()
+    def next_file():
+        """Move to the next file or finish the process."""
 
-        print("Releasing database lock...")
-        conn.close()
+        clear_output(wait=True)  # Clear output when moving to next file
 
-    def next_part():
-        nonlocal part_index
-        if not process_active:
-            finalize_output()
-            return
-        part_index += 1
-        if part_index >= len(parts_dataset):
-            with output:
-                clear_output(wait=True)
-                output.append_stdout("Finalizing file selection...\n")
-            finalize_file_selection()
+        nonlocal file_index, part_index, selected_list, current_file_id, parts_dataset
+        file_index += 1
+        part_index = 0
+        selected_list = None
+        current_file_id = None
+        parts_dataset = None
+
+        if file_index < len(unused_files):
+            process_file()
         else:
-            update_display()
+            finalize_output()
 
     def finalize_file_selection():
+        """Create 'good' and 'bad' datasets, then save them."""
         nonlocal selected_list, temp_selected_parts, special_selected_parts
-        nonlocal good_dataset, bad_dataset
-        if not process_active:
-            finalize_output()
-            return
+        nonlocal good_dataset, bad_dataset, parts_dataset
 
         selected_set = set(temp_selected_parts)
         special_indices_set = set(special_selected_parts)
@@ -247,6 +136,7 @@ def interactive_dataset_creation(
         bad_imgs = np.array([parts_dataset.images[i] for i in bad_indices])
         bad_targets = np.array([parts_dataset.targets[i] for i in bad_indices])
 
+        # Adjust weighting for "special" patches
         weights = torch.ones(len(good_imgs))
         for i, idx in enumerate(selected_set):
             if idx in special_indices_set:
@@ -273,32 +163,26 @@ def interactive_dataset_creation(
         good_dataset.overlap = overlap
         bad_dataset.overlap = overlap
 
+        # Save
         dir_path = find_project_root() / f"data/intermediate/{resolution}_{size}"
         dir_path.mkdir(parents=True, exist_ok=True)
 
-        # Only save if there are good images (len(good_dataset) > 0)
-        if selected_list == "train_test" and len(good_dataset) > 0:
-            path_to_train_test = dir_path / "train_test.pth"
-            if check_if_file_exists(path_to_train_test):
-                old_dataset = torch.load(path_to_train_test, weights_only=False)
-                if old_dataset.overlap != overlap:
-                    raise ValueError("Overlap mismatch with existing dataset.")
-                time.sleep(5)
-                good_dataset = old_dataset + good_dataset
-            torch.save(good_dataset, path_to_train_test)
+        # Save good dataset to train_test or validation
+        # Only save if length > 0, otherwise we would concatenate 1 dim with 3 or 4 dims
+        if selected_list in ["train_test", "validation"] and len(good_dataset) > 0:
+            out_file = f"{selected_list}.pth"  # "train_test.pth" or "validation.pth"
+            path_to_good = dir_path / out_file
 
-        elif selected_list == "validation" and len(good_dataset) > 0:
-            path_to_validation = dir_path / "validation.pth"
-            if check_if_file_exists(path_to_validation):
-                old_dataset = torch.load(path_to_validation, weights_only=False)
+            # If dataset already exists, update it
+            if check_if_file_exists(path_to_good):
+                old_dataset = torch.load(path_to_good, weights_only=False)
                 if old_dataset.overlap != overlap:
                     raise ValueError("Overlap mismatch with existing dataset.")
                 good_dataset = old_dataset + good_dataset
-            torch.save(good_dataset, path_to_validation)
 
-        # Save bad images only if there are any
-        # If we try to save an empty dataset, we would try to
-        # concatenate array of dimension 1 with array of dimension 3 or 4
+            torch.save(good_dataset, path_to_good)
+
+        # Save bad dataset if non-empty
         if len(bad_dataset) > 0:
             path_to_bad = dir_path / "bad.pth"
             if check_if_file_exists(path_to_bad):
@@ -306,40 +190,160 @@ def interactive_dataset_creation(
                 bad_dataset = old_bad + bad_dataset
             torch.save(bad_dataset, path_to_bad)
 
-        with output:
-            clear_output(wait=True)
-            print(f'Saved datasets at "{dir_path}".')
-        time.sleep(3)
+        print(f'Saved datasets at "{dir_path}".')
+        time.sleep(4)
 
+        # Reset
         temp_selected_parts.clear()
         special_selected_parts.clear()
         good_dataset = None
         bad_dataset = None
         next_file()
 
-    def next_file():
-        nonlocal file_index, part_index, selected_list, current_file_id, parts_dataset
-        if not process_active:
-            finalize_output()
+    def process_parts():
+        """Iterates through each part for the current file, prompting user keep/special/remove/q."""
+        nonlocal part_index, parts_dataset
+
+        while part_index < len(parts_dataset):
+            # Clear previous output while keeping logs
+            clear_output(wait=True)
+
+            # Close previous matplotlib figures BEFORE plotting a new one
+            plt.close("all")
+
+            # Print log messages so they persist
+            print(f"Processing file {file_index + 1}/{len(unused_files)}")
+            print(f"File ID: {current_file_id}")
+            print(f"Filename: {unused_files[file_index][1]}")
+            print(f"Processing part {part_index+1}/{len(parts_dataset)}")
+
+            # Call your `plot()` method (which internally calls `plt.show()`)
+            parts_dataset.plot(part_index, figsize=(6, 6))
+
+            # Add an extra plt.pause to ensure previous figures are removed
+            plt.pause(0.01)  # Small pause to let Jupyter process figure update
+
+            # Ask user
+            user_input = (
+                input(
+                    f"Part {part_index+1}/{len(parts_dataset)} - [keep / special / remove / quit] -> (a / w / d / q)? "
+                )
+                .strip()
+                .lower()
+            )
+
+            if user_input == "q" or user_input == "quit":
+                # Quit mid-file and revert it
+                revert_file_to_unused()
+                close_connection()
+                return
+
+            elif user_input == "keep" or user_input == "a":
+                temp_selected_parts.append(part_index)
+
+            elif user_input == "special" or user_input == "w":
+                temp_selected_parts.append(part_index)
+                special_selected_parts.append(part_index)
+
+            elif user_input == "remove" or user_input == "d":
+                pass  # do nothing, skip
+
+            else:
+                print("Invalid input. Please try again.")
+                continue  # re-prompt the same part
+
+            part_index += 1
+
+        # If we finished all parts
+        if part_index >= len(parts_dataset):
+            print("Finalizing file selection...")
+            finalize_file_selection()
+
+    def process_file():
+        """Handle the current file: ask user train_test/validation/q, then split if needed."""
+        nonlocal file_index, current_file_id, selected_list, parts_dataset, part_index
+
+        # If we've exhausted files, we can end
+        if file_index >= len(unused_files):
+            print("No more unused files.")
+            close_connection()
             return
 
-        file_index += 1
-        part_index = 0
-        selected_list = None
-        current_file_id = None
-        parts_dataset = None
+        file_id, filename = unused_files[file_index]
+        print(f"Processing file {file_index + 1}/{len(unused_files)}")
+        print(f"File ID: {file_id}")
+        print(f"Filename: {filename}")
 
-        if file_index < len(unused_files):
-            update_display()
-        else:
-            finalize_output()
+        # Prompt user
+        while True:
+            user_input = (
+                input("Choose [train_test / validation / quit] (t / v / q? ")
+                .strip()
+                .lower()
+            )
 
-    def finalize_output():
-        with output:
-            clear_output(wait=True)
-            print("Process finished.")
+            if user_input == "q" or user_input == "quit":
+                revert_file_to_unused()
+                close_connection()
+                return
 
-    # Start
-    create_buttons()
-    display(output)
-    update_display()
+            elif user_input in ["t", "v", "train_test", "validation"]:
+                if user_input == "t":
+                    user_input = "train_test"
+                elif user_input == "v":
+                    user_input = "validation"
+
+                selected_list = user_input
+                current_file_id = file_id
+                move_file_state(conn, current_file_id, user_input)
+
+                # Load & split
+                print("Splitting file, please wait...")
+                parts_dataset = load_and_split(
+                    filename,
+                    levees_data,
+                    data_dir=tifs_path,
+                    size=size,
+                    overlap=overlap,
+                    dilation_size=dilation_s,
+                )
+                print(f"Number of parts: {len(parts_dataset)}")
+
+                part_index = 0
+                process_parts()
+                return  # End file processing
+
+            else:
+                print("Invalid input. Please try again.")
+
+    def close_connection():
+        """Close db connection and print a message, then exit function."""
+        print("Releasing database lock...")
+        conn.close()
+        sys.exit(
+            0
+        )  # End the script if desired, or just 'return' if you want partial usage.
+
+    # -----------------------------------------------------
+    # Wrap in try-except to handle user interruptions
+    try:
+        # Fetch unused files
+        unused_files = get_files_by_state(conn, "unused")
+
+        if not unused_files:
+            print("No 'unused' files found.")
+            release_db_lock()
+            return
+
+        print("Starting interactive dataset creation...")
+        process_file()
+
+    except KeyboardInterrupt:
+        print("\nProcess interrupted by user. Unlocking database...")
+        release_db_lock()
+        sys.exit(0)
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        release_db_lock()
+        sys.exit(1)
