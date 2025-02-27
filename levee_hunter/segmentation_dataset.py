@@ -180,6 +180,19 @@ class SegmentationDataset(Dataset):
         self.images = [self.images[i] for i in valid_indices]
         self.targets = [self.targets[i] for i in valid_indices]
 
+    def __perform_transform(self, image, target):
+        # Handle string versions of transforms
+        if self.transform == "train_transform":
+            augmented = lhAug.train_transform(image=image, mask=target)
+        elif self.transform == "no_deformations_transform":
+            augmented = lhAug.no_deformations_transform(image=image, mask=target)
+        elif self.transform == "normalize_only":
+            augmented = lhAug.normalize_only(image=image, mask=target)
+        else:
+            augmented = self.transform(image=image, mask=target)
+
+        return augmented["image"], augmented["mask"]
+
     def __single_plot(self, idx, transform, figsize):
 
         fig, axes = plt.subplots(1, 2, figsize=figsize)  # 1 row, 2 columns
@@ -195,9 +208,7 @@ class SegmentationDataset(Dataset):
                 self.transform is not None
             ), "Transform is set to True but no transform function is provided."
 
-            augmented = self.transform(image=image, mask=target)
-            image = augmented["image"]
-            target = augmented["mask"]
+            image, target = self.__perform_transform(image, target)
 
         im = axes[0].imshow(image, cmap="viridis")
         axes[0].set_title("Lidar Image")
@@ -347,18 +358,7 @@ class SegmentationDataset(Dataset):
         if self.transform:
             N = image.shape[1]
 
-            # Handle string versions of transforms
-            if self.transform == "train_transform":
-                augmented = lhAug.train_transform(image=image, mask=target)
-            elif self.transform == "no_deformations_transform":
-                augmented = lhAug.no_deformations_transform(image=image, mask=target)
-            elif self.transform == "normalize_only":
-                augmented = lhAug.normalize_only(image=image, mask=target)
-            else:
-                augmented = self.transform(image=image, mask=target)
-
-            image = augmented["image"]
-            target = augmented["mask"]
+            image, target = self.__perform_transform(image, target)
 
             image = image.reshape(1, N, N)
             target = target.reshape(1, N, N)
