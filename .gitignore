@@ -26,6 +26,9 @@ models/**
 !models/**/*.md
 !models/**/*.gitkeep
 
-
+# Ignore everything under 'scripts' except 'hypatia'
 scripts/**
+!scripts/hypatia/
+!scripts/hypatia/**
+
 notebooks/_jobs/**
