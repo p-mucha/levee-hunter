@@ -57,6 +57,13 @@ mamba env update --prefix /home/pmucha/.conda/envs/Fathom -f environment.yml
 Which should finish in a couple of minutes (tested). 
 
 
+Sometimes, an error might occur for example for mamba --version but which mamba can still find the correct location.
+In that case I found
+```
+unset -f mamba
+```
+To be helpful.
+
 
 
 
