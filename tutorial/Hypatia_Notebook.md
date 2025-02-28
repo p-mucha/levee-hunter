@@ -23,7 +23,7 @@ This tutorial provides a step-by-step guide on how to run Python notebooks on th
 
 ## Troubleshooting
 **jupyter-lab**: If jupyterlab is not installed in the environment user wishes to activate in jupyter, the `.out` file will contain an error. Simply install jupyterlab:
-1. `conda activate [environment name`
+1. `conda activate [environment name]`
 2. `mamba install -c conda-forge jupyterlab` or `conda install -c conda-forge jupyterlab`
    
 **Pytorch**: If Pytorch isn't correctly utilizing CUDA on GPU cores, follow these steps:
