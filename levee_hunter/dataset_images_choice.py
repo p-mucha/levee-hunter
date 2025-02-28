@@ -24,8 +24,10 @@ def load_and_split(
 
     img = rioxarray.open_rasterio(current_file_path)
 
+    # mask_type set to None for now, so that the database is general and user can change it
+    # later as they wish, to dilated or goussian etc
     lidar_data, target = get_mask(
-        img, levees_data.to_crs(img.rio.crs), invert=True, dilation_size=dilation_size
+        img, levees_data.to_crs(img.rio.crs), invert=True, mask_type=None
     )
 
     if len(target.shape) == 2:
