@@ -4,6 +4,7 @@
 ## Table of Contents 
 - [Installation](#installation)
 - [Getting Data](#getting-data)
+- [Computing on Hypatia](#computing-on-hypatia)
 - [Recreating Environment on Hypatia](#recreating-environment-on-hypatia)
 
 ## Installation
@@ -28,11 +29,11 @@ All data files can be found on Hypatia at:
 `/share/gpu5/pmucha/fathom/levee-hunter/data/`
 
 ## Computing on Hypatia
-A login to the Hypatia cluster is through the login node. After user ssh to hypatia, the terminal will show [username]@hypatia-login, which means user is on the login-node. 
+1. **login-node**: A login to the Hypatia cluster is through the login node. After user ssh to hypatia, the terminal will show [username]@hypatia-login, which means user is on the login-node. 
 
-**No computing on the login-node**: It is important that login-node should not be used for any heavy tasks. This includes using conda to solve environment. This can potentially block access to the cluster for all the other users. 
+2. **No computing on the login-node**: It is important that login-node should not be used for any heavy tasks. This includes using conda to solve environment. This can potentially block access to the cluster for all the other users. 
 
-**Changing Node**: To go to other node than the login one, use one of the two scripts: 
+3. **Changing Node**: To go to other node than the login one, use one of the two scripts: 
 ```
 source cpu_bash.sh
 ```
@@ -44,7 +45,7 @@ source gpu_bash.sh
 
 Note not everyone has access to the cpu nodes, therefore for example I have to use gpu nodes only.
 
-**Running Jupyter**: Please see the tutorial/Hypatia_notebook.md.
+4. **Running Jupyter**: Please see the tutorial/Hypatia_notebook.md.
 
 
 ## Recreating Environment on Hypatia
