@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from sklearn.model_selection import train_test_split
+from scipy.ndimage import binary_dilation, gaussian_filter
 import warnings
 
 import levee_hunter.augmentations as lhAug
@@ -193,14 +194,74 @@ class SegmentationDataset(Dataset):
 
         return augmented["image"], augmented["mask"]
 
-    def __single_plot(self, idx, transform, figsize):
+    def __apply_mask_type(
+        self, target, mask_type="dilated", dilation_size=10, gaussian_sigma=5.0
+    ):
 
+        # This block handles potentially wrong option selection by user
+        # Unlike get_mask, there is no need to accept None as input here
+        valid_mask_types = {"dilated", "gaussian"}
+        if mask_type not in valid_mask_types:
+            raise ValueError(
+                f"Invalid mask_type. Choose one of {valid_mask_types}, or None."
+            )
+        if dilation_size != 10 and mask_type != "dilated":
+            warnings.warn(
+                "dilation_size will be ignored if mask_type is not 'dilated'."
+            )
+        if gaussian_sigma != 5.0 and mask_type != "gaussian":
+            warnings.warn(
+                "gaussian_sigma will be ignored if mask_type is not 'gaussian'."
+            )
+
+        # This block handles different types of the target
+        to_tensor = False
+        if isinstance(target, torch.Tensor):
+            target = target.numpy()
+            to_tensor = True
+
+        # Sometimes our self.targets may have 4d shape like
+        # (123, 1, 512, 512), then if one tries this on self.targets[ix]
+        # we need to squeeze
+        unsqueeze = False
+        if len(target.shape) == 3:
+            target = target.squeeze()
+            unsqueeze = True
+
+        if mask_type == "dilated":
+            # Apply binary dilation
+            structure = np.ones((dilation_size, dilation_size), dtype=bool)
+            target = binary_dilation(target, structure=structure).astype(np.uint8)
+        elif mask_type == "gaussian":
+            # Apply Gaussian filter
+            target = gaussian_filter(target.astype(float), sigma=gaussian_sigma)
+            target = (target > 0.1).astype(np.uint8)
+
+        if unsqueeze:
+            target = target.reshape(1, *target.shape)
+
+        if to_tensor:
+            target = torch.tensor(target, dtype=torch.float32)
+
+        return target
+
+    def __single_plot(
+        self, idx, transform, figsize, mask_type, dilation_size, gaussian_sigma
+    ):
         fig, axes = plt.subplots(1, 2, figsize=figsize)  # 1 row, 2 columns
 
         # Regardles of whether self.to_array() has been used or not
         # images[idx] will have shape (1, N, N), so we squeeze it for plotting
         image = np.array(self.images[idx].squeeze())
         target = np.array(self.targets[idx].squeeze())
+
+        if mask_type is not None:
+            target = self.__apply_mask_type(
+                target,
+                mask_type=mask_type,
+                dilation_size=dilation_size,
+                gaussian_sigma=gaussian_sigma,
+            )
 
         # If transform is true, perform self.transform on the image and target
         if transform:
@@ -226,12 +287,24 @@ class SegmentationDataset(Dataset):
         plt.tight_layout()
         plt.show()
 
-    def plot(self, idx=0, transform=False, figsize=(6, 3)):
+    def plot(
+        self,
+        idx=0,
+        transform=False,
+        figsize=(6, 3),
+        mask_type=None,
+        dilation_size=10,
+        gaussian_sigma=5.0,
+    ):
         if isinstance(idx, list) or isinstance(idx, np.ndarray):
             for i in idx:
-                self.__single_plot(i, transform, figsize)
+                self.__single_plot(
+                    i, transform, figsize, mask_type, dilation_size, gaussian_sigma
+                )
         else:
-            self.__single_plot(idx, transform, figsize)
+            self.__single_plot(
+                idx, transform, figsize, mask_type, dilation_size, gaussian_sigma
+            )
 
     def to_array(self):
         """
