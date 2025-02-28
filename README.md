@@ -28,7 +28,7 @@ Those instructions only apply when using conda, as other environment managers mi
 
 First we need to activate conda:
 ```
-source /share/apps/anaconda/3-2019.03/etc/profile.d/conda.sh
+source /share/apps/anaconda/3-2022.05/etc/profile.d/conda.sh
 ```
 
 Now one could use conda to recreate the environment from environment.yml, but it might be slow.
