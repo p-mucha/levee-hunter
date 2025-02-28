@@ -17,9 +17,7 @@ from levee_hunter.augmentations import train_transform, normalize_only
 from levee_hunter.paths import find_project_root, check_if_file_exists
 
 
-def load_and_split(
-    current_file_name, levees_data, data_dir, size, overlap, dilation_size
-):
+def load_and_split(current_file_name, levees_data, data_dir, size, overlap):
     current_file_path = os.path.join(data_dir, current_file_name)
 
     img = rioxarray.open_rasterio(current_file_path)
@@ -50,7 +48,7 @@ def load_and_split(
 
 
 def interactive_dataset_creation(
-    db_path, levees_file_path, resolution="1m", size=1056, overlap=26, dilation_s=0
+    db_path, levees_file_path, resolution="1m", size=1056, overlap=26, dilation_s=10
 ):
     """
     A text-based interactive workflow for splitting images into train_test,
@@ -219,11 +217,16 @@ def interactive_dataset_creation(
             print(f"Filename: {unused_files[file_index][1]}")
             print(f"Processing part {part_index+1}/{len(parts_dataset)}")
 
-            # Call your `plot()` method (which internally calls `plt.show()`)
-            parts_dataset.plot(part_index, figsize=(6, 6))
+            # Call `plot()` method (which internally calls `plt.show()`)
+            parts_dataset.plot(
+                part_index,
+                figsize=(6, 6),
+                mask_type="dilated",
+                dilation_size=dilation_s,
+            )
 
             # Add an extra plt.pause to ensure previous figures are removed
-            plt.pause(0.01)  # Small pause to let Jupyter process figure update
+            plt.pause(0.05)  # Small pause to let Jupyter process figure update
 
             # Ask user
             user_input = (
