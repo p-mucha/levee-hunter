@@ -10,7 +10,7 @@
 This tutorial provides a step-by-step guide on how to run Python notebooks on the UCL Hypatia cluster using VSCode.
 
 ## Setting Up the Environment
-1. **Loading Anaconda**: Run `source /share/apps/anaconda/3-2019.03/etc/profile.d/conda.sh` to load Anaconda.
+1. **Loading Anaconda**: Run `source /share/apps/anaconda/3-2022.05/etc/profile.d/conda.sh` to load Anaconda.
 2. **Set Up Virtual Environment**: Visit the [README](../README.md) to find the steps for setting up and activating a virtual environment.
 3. **Install levee_hunter**: Run `pip install -e .` from within the levee_hunter directory.
 
@@ -21,6 +21,10 @@ This tutorial provides a step-by-step guide on how to run Python notebooks on th
 4. **Run Your Notebook**: Open the notebook you wish to run within VSCode. When selecting a kernel for your notebook, select "Existing Jupyter Server" and enter the URL. Hit enter to confirm the next few steps and your notebook should now be running.
 
 ## Troubleshooting
+**jupyter-lab**: If jupyterlab is not installed in the environment user wishes to activate in jupyter, the `.out` file will contain an error. Simply install jupyterlab:
+1. `conda activate [environment name`
+2. `mamba install -c conda-forge jupyterlab` or `conda install -c conda-forge jupyterlab`
+   
 **Pytorch**: If Pytorch isn't correctly utilizing CUDA on GPU cores, follow these steps:
 1. Uninstall Pytorch: `mamba uninstall pytorch`
 2. Reinstall Pytorch using pip: `pip3 install torch torchvision torchaudio`
