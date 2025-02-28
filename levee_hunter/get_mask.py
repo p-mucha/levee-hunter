@@ -38,11 +38,17 @@ def get_mask(
             f"Invalid mask_type. Choose one of {valid_mask_types}, or None."
         )
 
-    if dilation_size is not None and mask_type != "dilated":
+    if dilation_size != 10 and mask_type != "dilated":
         warnings.warn("dilation_size will be ignored if mask_type is not 'dilated'.")
 
-    if gaussian_sigma is not None and mask_type != "gaussian":
+    if gaussian_sigma != 5.0 and mask_type != "gaussian":
         warnings.warn("gaussian_sigma will be ignored if mask_type is not 'gaussian'.")
+
+    if mask_type is None:
+        if dilation_size != 10:
+            warnings.warn("dilation_size will be ignored if mask_type is None.")
+        if gaussian_sigma != 5.0:
+            warnings.warn("gaussian_sigma will be ignored if mask_type is None.")
 
     transform = tif_image.rio.transform()  # Affine transformation
     shape = tif_image.shape[-2:]  # Shape of the raster (rows, cols)
