@@ -5,6 +5,7 @@ from scipy.ndimage import binary_dilation, gaussian_filter
 import numpy as np
 from shapely.geometry import box
 import geopandas as gpd
+import warnings
 
 
 def get_mask(
@@ -22,7 +23,7 @@ def get_mask(
     - tif_image: A rioxarray DataArray containing the raster data.
     - levees: A GeoDataFrame containing levee geometries.
     - invert: If True, inverts the mask.
-    - mask_type: Type of mask to apply ("dilated" or "gaussian")
+    - mask_type: Type of mask to apply ("dilated" or "gaussian", or None for no change)
     - dilation_size: Size of the kernel used for thickening levee lines (default=10).
     - gaussian_sigma: Standard deviation for Gaussian filter (default=5.0)
 
@@ -31,6 +32,18 @@ def get_mask(
       1. The original raster image as a NumPy array.
       2. The binary mask as a NumPy array.
     """
+    valid_mask_types = {"dilated", "gaussian"}
+    if mask_type not in valid_mask_types and mask_type is not None:
+        raise ValueError(
+            f"Invalid mask_type. Choose one of {valid_mask_types}, or None."
+        )
+
+    if dilation_size is not None and mask_type != "dilated":
+        warnings.warn("dilation_size will be ignored if mask_type is not 'dilated'.")
+
+    if gaussian_sigma is not None and mask_type != "gaussian":
+        warnings.warn("gaussian_sigma will be ignored if mask_type is not 'gaussian'.")
+
     transform = tif_image.rio.transform()  # Affine transformation
     shape = tif_image.shape[-2:]  # Shape of the raster (rows, cols)
 
@@ -56,8 +69,10 @@ def get_mask(
         # Apply Gaussian filter
         mask = gaussian_filter(levee_raster.astype(float), sigma=gaussian_sigma)
         mask = (mask > 0.1).astype(np.uint8)  # Convert to binary mask
+
+    # If mask_type is None, return the original raster
     else:
-        raise ValueError("Invalid mask_type. Choose 'dilated' or 'gaussian'.")
+        mask = levee_raster
 
     if invert:
         mask = 1 - mask
