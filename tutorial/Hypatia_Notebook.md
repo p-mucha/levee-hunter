@@ -19,6 +19,7 @@ This tutorial provides a step-by-step guide on how to run Python notebooks on th
 2. **Launch Jupyter Server on GPU**: Run `sbatch jupyterlab_gpu.sh [environment name]` from within the `/notebooks/` directory.
 3. **Access the Server URL**: The `_jobs/` directory will now have a `.out` file containing details of the Jupyter server URL (copy the URL). It will be under the line saying "Jupyter Server X.XX.X is running at:". It may take up to a few minutes to appear within the `.out` file.
 4. **Run Your Notebook**: Open the notebook you wish to run within VSCode. When selecting a kernel for your notebook, select "Existing Jupyter Server" and enter the URL. Hit enter to confirm the next few steps and your notebook should now be running.
+5. **Cancel Once Finished**: To cancel your job once finished, check its ID number: `squeue -u [your username]`, and then: `scancel [your job ID]`.
 
 ## Troubleshooting
 **jupyter-lab**: If jupyterlab is not installed in the environment user wishes to activate in jupyter, the `.out` file will contain an error. Simply install jupyterlab:
