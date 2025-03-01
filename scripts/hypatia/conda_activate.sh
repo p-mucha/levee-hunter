@@ -1,1 +1,1 @@
-source /share/apps/anaconda/3-2019.03/etc/profile.d/conda.sh
+source /share/apps/anaconda/3-2022.05/etc/profile.d/conda.sh

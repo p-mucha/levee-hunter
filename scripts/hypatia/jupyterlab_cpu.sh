@@ -25,6 +25,6 @@ Remember to scancel job when done. Check output below for access token if
 you need it.
 "
 
-source /share/apps/anaconda/3-2019.03/etc/profile.d/conda.sh
+source /share/apps/anaconda/3-2022.05/etc/profile.d/conda.sh
 conda activate $1
 srun -n1 jupyter-lab --no-browser --port=${port} --ip=${node}
