@@ -195,7 +195,12 @@ class SegmentationDataset(Dataset):
         return augmented["image"], augmented["mask"]
 
     def __apply_mask_type(
-        self, target, mask_type="dilated", dilation_size=10, gaussian_sigma=5.0
+        self,
+        target,
+        mask_type="dilated",
+        dilation_size=10,
+        gaussian_sigma=5.0,
+        invert=True,
     ):
 
         # This block handles potentially wrong option selection by user
@@ -228,6 +233,9 @@ class SegmentationDataset(Dataset):
             target = target.squeeze()
             unsqueeze = True
 
+        if invert:
+            target = 1 - target
+
         if mask_type == "dilated":
             # Apply binary dilation
             structure = np.ones((dilation_size, dilation_size), dtype=bool)
@@ -243,6 +251,8 @@ class SegmentationDataset(Dataset):
         if to_tensor:
             target = torch.tensor(target, dtype=torch.float32)
 
+        if invert:
+            target = 1 - target
         return target
 
     def __single_plot(
