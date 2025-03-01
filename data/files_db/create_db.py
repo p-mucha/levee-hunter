@@ -1,4 +1,6 @@
 import os
+from pathlib import Path
+import shutil
 import sqlite3
 import time
 
@@ -58,7 +60,50 @@ def main():
     conn.close()
     print(f"Added {len(tif_files)} files to the database. \n")
     print("Database creation completed.")
-    return
+
+    # Hardcoded target directory (must exist)
+    hardcoded_dir = Path("/share/gpu5/pmucha/fathom/levee-hunter/data/files_db")
+    if not hardcoded_dir.exists():
+        raise FileNotFoundError(f"Hardcoded directory {hardcoded_dir} does not exist.")
+
+    # Ask user if they want to move the database if the paths differ.
+    if db_path.parent != hardcoded_dir:
+        answer = (
+            input(
+                f"Database is currently at {db_path.parent}, which is different from the target directory ({hardcoded_dir}). "
+                "Do you want to copy it to there? (yes/no): "
+            )
+            .strip()
+            .lower()
+        )
+        if answer == "yes":
+            new_db_path = hardcoded_dir / db_path.name
+            if new_db_path.exists():
+                overwrite = (
+                    input(
+                        f"File {new_db_path} already exists. This will replace the current file. Do you wish to continue? (yes/no): "
+                    )
+                    .strip()
+                    .lower()
+                )
+
+                # if something different than yes -> return
+                if overwrite != "yes":
+                    print("Operation canceled. Database was not copied.")
+                    return
+                # if yes, ask for password
+                else:
+                    pass_1234 = input("WARNING, Please enter the password (1234): ")
+                    if pass_1234 != "1234":
+                        print("Wrong password. Operation canceled.")
+                        return
+                    else:
+                        pass
+
+            shutil.copy2(str(db_path), str(new_db_path))
+            print(f"Database copied to {new_db_path}")
+        else:
+            print("Database was NOT copied.")
 
 
 if __name__ == "__main__":
