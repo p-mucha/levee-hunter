@@ -282,7 +282,7 @@ def interactive_dataset_creation(
         # Prompt user
         while True:
             user_input = (
-                input("Choose [train_test / validation / quit] (t / v / q? ")
+                input("Choose [train_test / validation / quit] (t / v / q): ")
                 .strip()
                 .lower()
             )
@@ -310,7 +310,6 @@ def interactive_dataset_creation(
                     data_dir=tifs_path,
                     size=size,
                     overlap=overlap,
-                    dilation_size=dilation_s,
                 )
                 print(f"Number of parts: {len(parts_dataset)}")
 
