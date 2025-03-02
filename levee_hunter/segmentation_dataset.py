@@ -45,7 +45,9 @@ class SegmentationDataset(Dataset):
         if self.transform not in [
             "train_transform",
             "no_deformations_transform",
-            "normalize_only",
+            "divide_by255_normalize",
+            "z_score_normalize",
+            "min_max_normalize",
         ]:
             FutureWarning(
                 "transform should be a string, this will be changed in the future"
@@ -187,8 +189,12 @@ class SegmentationDataset(Dataset):
             augmented = lhAug.train_transform(image=image, mask=target)
         elif self.transform == "no_deformations_transform":
             augmented = lhAug.no_deformations_transform(image=image, mask=target)
-        elif self.transform == "normalize_only":
-            augmented = lhAug.normalize_only(image=image, mask=target)
+        elif self.transform == "z_score_normalize":
+            augmented = lhAug.z_score_normalize(image=image, mask=target)
+        elif self.transform == "min_max_normalize":
+            augmented = lhAug.min_max_normalize(image=image, mask=target)
+        elif self.transform == "divide_by255_normalize":
+            augmented = lhAug.divide_by255_normalize(image=image, mask=target)
         else:
             augmented = self.transform(image=image, mask=target)
 
@@ -254,6 +260,15 @@ class SegmentationDataset(Dataset):
         if invert:
             target = 1 - target
         return target
+    
+    def modify_targets(self, mask_type=None, dilation_size=10, gaussian_sigma=5.0):
+        for i in range(len(self.targets)):
+            self.targets[i] = self.__apply_mask_type(
+                self.targets[i],
+                mask_type=mask_type,
+                dilation_size=dilation_size,
+                gaussian_sigma=gaussian_sigma,
+            )
 
     def __single_plot(
         self, idx, transform, figsize, mask_type, dilation_size, gaussian_sigma
