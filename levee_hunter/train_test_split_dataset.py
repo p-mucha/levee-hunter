@@ -2,7 +2,6 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import warnings
 from levee_hunter.segmentation_dataset import SegmentationDataset
-from levee_hunter.augmentations import normalize_only
 
 
 def train_test_split_dataset(dataset, test_size=0.2):
@@ -54,7 +53,7 @@ def train_test_split_dataset(dataset, test_size=0.2):
         )
 
     val_dataset = SegmentationDataset(
-        images=val_images, targets=val_targets, transform=normalize_only, split=False
+        images=val_images, targets=val_targets, transform='z_score_normalize', split=False
     )
 
     # Also set the weights for the training dataset, if they exist
