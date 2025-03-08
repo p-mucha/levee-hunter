@@ -83,22 +83,21 @@ def chunker(lst, chunksize):
     for i in range(0, len(lst), chunksize):
         yield lst[i : i + chunksize]
 
-def make_task_list(cell_size, levee_path, bbox = []):
+def divide(total_bounds, length):
+    xs = np.arange(total_bounds[0] + length/2, total_bounds[2], step=length)
+    ys = np.arange(total_bounds[1] + length/2, total_bounds[3], step=length)
+    if (len(xs) == 0) or (len(ys) == 0):
+        print("The area is too small to divide, using the whole area")
+        xmin, ymin, xmax, ymax = total_bounds
+        return gpd.GeoSeries(box(xmin, ymin, xmax, ymax))
+    else:
+        print("Dividing the area into", len(xs), "x", len(ys), "squares")
+        xv, yv = np.meshgrid(xs, ys)
+        combinations = np.array(list(zip(xv.flatten(), yv.flatten())))
+        squares = gpd.points_from_xy(combinations[:, 0], combinations[:, 1]).buffer(length/2, cap_style=3)
+        return gpd.GeoSeries(squares)
 
-    def divide(total_bounds, length):
-        xs = np.arange(total_bounds[0] + length/2, total_bounds[2], step=length)
-        ys = np.arange(total_bounds[1] + length/2, total_bounds[3], step=length)
-        if (len(xs) == 0) or (len(ys) == 0):
-            print("The area is too small to divide, using the whole area")
-            xmin, ymin, xmax, ymax = total_bounds
-            return gpd.GeoSeries(box(xmin, ymin, xmax, ymax))
-        else:
-            print("Dividing the area into", len(xs), "x", len(ys), "squares")
-            xv, yv = np.meshgrid(xs, ys)
-            combinations = np.array(list(zip(xv.flatten(), yv.flatten())))
-            squares = gpd.points_from_xy(combinations[:, 0], combinations[:, 1]).buffer(length/2, cap_style=3)
-            return gpd.GeoSeries(squares)
-    
+def make_task_list(cell_size, levee_path, bbox = []):
     levee_gdf = gpd.read_file(levee_path, layer="System")
     if bbox is not None and len(bbox) == 4:
         total_bounds = np.array(bbox)
@@ -106,7 +105,6 @@ def make_task_list(cell_size, levee_path, bbox = []):
     else:
         total_bounds = levee_gdf[["name", "geometry"]].geometry.total_bounds
         print("No valid total bounds provided. Using the bounds of levee data.")
-
     print("Total bounds:", total_bounds)
     grid = divide(total_bounds, cell_size)
     mask = grid.apply(lambda b: levee_gdf['geometry'].intersects(b).any())
