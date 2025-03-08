@@ -76,9 +76,10 @@ def train_model(
             # and divide over sum of weights
             # Loss is then just a scalar for which we can then compute gradients with
             # respect to model parameters
-            loss = loss.mean(
-                dim=(2, 3)
-            )  # Compute mean over H and W (pixel-wise mean per image)
+            if len(loss.shape) == 4:
+                loss = loss.mean(
+                    dim=(2, 3)
+                )  # Compute mean over H and W (pixel-wise mean per image)
 
             # Normalize by total weight sum (to match validation loss scale)
             loss = (loss * weights.view(-1, 1)).sum() / weights.sum()
