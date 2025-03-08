@@ -42,15 +42,13 @@ class SegmentationDataset(Dataset):
             self.targets = targets
 
         self.transform = transform
-        if self.transform not in [
-            "train_transform",
-            "no_deformations_transform",
-            "divide_by255_normalize",
-            "z_score_normalize",
-            "min_max_normalize",
-        ]:
-            FutureWarning(
-                "transform should be a string, this will be changed in the future"
+        # This checks if transform is inside TRANSFORMS dictionary keyes
+        # If not, it will raise a warning
+        if self.transform not in lhAug.TRANSFORMS:
+            warnings.warn(
+                "transform should be a string from levee_hunter.augmentations.TRANSFORMS, "
+                "code should work without this, but this will be changed in the future",
+                FutureWarning,
             )
         self.empty_images = None
         self.empty_targets = None
@@ -185,16 +183,9 @@ class SegmentationDataset(Dataset):
 
     def __perform_transform(self, image, target):
         # Handle string versions of transforms
-        if self.transform == "train_transform":
-            augmented = lhAug.train_transform(image=image, mask=target)
-        elif self.transform == "no_deformations_transform":
-            augmented = lhAug.no_deformations_transform(image=image, mask=target)
-        elif self.transform == "z_score_normalize":
-            augmented = lhAug.z_score_normalize(image=image, mask=target)
-        elif self.transform == "min_max_normalize":
-            augmented = lhAug.min_max_normalize(image=image, mask=target)
-        elif self.transform == "divide_by255_normalize":
-            augmented = lhAug.divide_by255_normalize(image=image, mask=target)
+        if self.transform in lhAug.TRANSFORMS:
+            augmentation = lhAug.TRANSFORMS[self.transform]
+            augmented = augmentation(image=image, mask=target)
         else:
             augmented = self.transform(image=image, mask=target)
 
@@ -260,7 +251,7 @@ class SegmentationDataset(Dataset):
         if invert:
             target = 1 - target
         return target
-    
+
     def modify_targets(self, mask_type=None, dilation_size=10, gaussian_sigma=5.0):
         for i in range(len(self.targets)):
             self.targets[i] = self.__apply_mask_type(
