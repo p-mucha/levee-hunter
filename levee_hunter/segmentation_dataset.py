@@ -44,7 +44,7 @@ class SegmentationDataset(Dataset):
         self.transform = transform
         # This checks if transform is inside TRANSFORMS dictionary keyes
         # If not, it will raise a warning
-        if self.transform not in lhAug.TRANSFORMS:
+        if self.transform and self.transform not in lhAug.TRANSFORMS:
             warnings.warn(
                 "transform should be a string from levee_hunter.augmentations.TRANSFORMS, "
                 "code should work without this, but this will be changed in the future",
@@ -182,14 +182,41 @@ class SegmentationDataset(Dataset):
         self.targets = [self.targets[i] for i in valid_indices]
 
     def __perform_transform(self, image, target):
-        # Handle string versions of transforms
+        # Store original shapes
+        orig_image_shape = image.shape
+        orig_target_shape = target.shape
+
+        # Determine if image is channel-first (assumes channel-first if len(shape)==3 and first dim is small)
+        image_was_channel_first = False
+        if len(orig_image_shape) == 3 and orig_image_shape[0] <= 4:
+            # Convert from (C, H, W) to (H, W, C)
+            image = image.transpose(1, 2, 0)
+            image_was_channel_first = True
+
+        # Do the same for the target, if needed.
+        target_was_channel_first = False
+        if len(orig_target_shape) == 3 and orig_target_shape[0] <= 4:
+            target = target.transpose(1, 2, 0)
+            target_was_channel_first = True
+
+        # Perform augmentation.
         if self.transform in lhAug.TRANSFORMS:
             augmentation = lhAug.TRANSFORMS[self.transform]
             augmented = augmentation(image=image, mask=target)
         else:
             augmented = self.transform(image=image, mask=target)
 
-        return augmented["image"], augmented["mask"]
+        aug_image = augmented["image"]
+        aug_target = augmented["mask"]
+
+        # Convert augmented image back to original shape if it was channel-first.
+        if image_was_channel_first:
+            # Convert from (H, W, C) back to (C, H, W)
+            aug_image = aug_image.transpose(2, 0, 1)
+        if target_was_channel_first:
+            aug_target = aug_target.transpose(2, 0, 1)
+
+        return aug_image, aug_target
 
     def __apply_mask_type(
         self,
@@ -262,7 +289,14 @@ class SegmentationDataset(Dataset):
             )
 
     def __single_plot(
-        self, idx, transform, figsize, mask_type, dilation_size, gaussian_sigma
+        self,
+        idx,
+        transform,
+        figsize,
+        mask_type,
+        dilation_size,
+        gaussian_sigma,
+        cmap="viridis",
     ):
         fig, axes = plt.subplots(1, 2, figsize=figsize)  # 1 row, 2 columns
 
@@ -287,7 +321,7 @@ class SegmentationDataset(Dataset):
 
             image, target = self.__perform_transform(image, target)
 
-        im = axes[0].imshow(image, cmap="viridis")
+        im = axes[0].imshow(image, cmap=cmap)
         axes[0].set_title("Lidar Image")
         axes[0].axis("off")
 
@@ -311,15 +345,22 @@ class SegmentationDataset(Dataset):
         mask_type=None,
         dilation_size=10,
         gaussian_sigma=5.0,
+        cmap="viridis",
     ):
         if isinstance(idx, list) or isinstance(idx, np.ndarray):
             for i in idx:
                 self.__single_plot(
-                    i, transform, figsize, mask_type, dilation_size, gaussian_sigma
+                    i,
+                    transform,
+                    figsize,
+                    mask_type,
+                    dilation_size,
+                    gaussian_sigma,
+                    cmap,
                 )
         else:
             self.__single_plot(
-                idx, transform, figsize, mask_type, dilation_size, gaussian_sigma
+                idx, transform, figsize, mask_type, dilation_size, gaussian_sigma, cmap
             )
 
     def to_array(self):
