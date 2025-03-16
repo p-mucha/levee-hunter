@@ -161,3 +161,54 @@ def create_database(db_path):
     )
 
     conn.commit()
+
+
+def remove_file_from_db(conn, identifier):
+    """
+    identifier can be either file name or file ID.
+    """
+    cursor = conn.cursor()
+
+    try:
+        # Try to interpret identifier as a ID first
+        cursor.execute("SELECT file_id FROM files WHERE file_id = ?", (identifier,))
+        row = cursor.fetchone()
+
+        if row is None:
+            # If not found, try to interpret identifier as a file name
+            cursor.execute("SELECT file_id FROM files WHERE path = ?", (identifier,))
+            row = cursor.fetchone()
+            if row is None:
+                raise ValueError(
+                    f"No file found in DB matching file_id or path: {identifier}"
+                )
+
+        file_id = row[0]
+
+        # Delete the file row from DB
+        cursor.execute("DELETE FROM files WHERE file_id = ?", (file_id,))
+        conn.commit()
+        print(f"File {file_id} removed successfully from the database.")
+        return file_id
+
+    except sqlite3.OperationalError as e:
+        if "database is locked" in str(e):
+            print(f"Database is locked. Rolling back deletion for {identifier}.")
+            conn.rollback()
+            return None
+        else:
+            raise
+
+
+def get_file_by_id(conn, file_id):
+    cursor = conn.cursor()
+    cursor.execute("SELECT path, state FROM files WHERE file_id = ?", (file_id,))
+    row = cursor.fetchone()
+
+    if row:
+        path, state = row
+        print(f"File ID: {file_id}")
+        print(f"Path: {path}")
+        print(f"State: {state}")
+    else:
+        print(f"No file found in the database with ID: {file_id}")
