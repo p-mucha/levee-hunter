@@ -13,7 +13,7 @@ import torch
 from levee_hunter.database_management import get_files_by_state, move_file_state
 from levee_hunter.get_mask import get_mask
 from levee_hunter.segmentation_dataset import SegmentationDataset
-from levee_hunter.augmentations import train_transform, normalize_only
+from levee_hunter.augmentations import TRANSFORMS
 from levee_hunter.paths import find_project_root, check_if_file_exists
 
 
@@ -48,7 +48,14 @@ def load_and_split(current_file_name, levees_data, data_dir, size, overlap):
 
 
 def interactive_dataset_creation(
-    db_path, levees_file_path, resolution="1m", size=1056, overlap=26, dilation_s=10
+    db_path,
+    levees_file_path,
+    resolution="1m",
+    size=1056,
+    overlap=26,
+    dilation_s=10,
+    figsize=(6, 6),
+    cmap="viridis",
 ):
     """
     A text-based interactive workflow for splitting images into train_test,
@@ -220,9 +227,10 @@ def interactive_dataset_creation(
             # Call `plot()` method (which internally calls `plt.show()`)
             parts_dataset.plot(
                 part_index,
-                figsize=(6, 6),
+                figsize=figsize,
                 mask_type="dilated",
                 dilation_size=dilation_s,
+                cmap=cmap,
             )
 
             # Add an extra plt.pause to ensure previous figures are removed
