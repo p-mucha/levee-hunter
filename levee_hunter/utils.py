@@ -1,5 +1,38 @@
+import yaml
+from levee_hunter.paths import find_project_root
+
+
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+def get_processing_config(config_name: str = "default") -> dict:
+    """Returns the processing configuration from the YAML file.
+    The configuration should be located inside /configs/processing.yaml.
+
+    Inputs:
+    - config_name: The name of the configuration to be loaded.
+
+    Outputs:
+    - config: A dictionary containing the configuration.
+    """
+
+    # Define the path to your YAML file
+    config_file = find_project_root() / "configs/processing.yaml"
+    if not config_file.exists():
+        raise FileNotFoundError(f"Config file not found: {config_file}")
+
+    # Open and load the YAML file
+    with open(config_file, "r") as f:
+        configs = yaml.safe_load(f)
+
+    if config_name not in configs:
+        raise KeyError(f"Configuration '{config_name}' not found in {config_file}.")
+
+    # Access the configuration
+    config = configs[config_name]
+
+    return config
 
 
 def find_splits(Z, s=256, max_overlap_frac=0.1):
@@ -43,11 +76,10 @@ def find_splits(Z, s=256, max_overlap_frac=0.1):
     return solutions
 
 
-import ipywidgets as widgets
-from IPython.display import display, clear_output
-
-
 def interactive_labeling(dataset):
+    import ipywidgets as widgets
+    from IPython.display import display, clear_output
+
     """
     Interactive function to label images in a dataset by accepting user input.
 
