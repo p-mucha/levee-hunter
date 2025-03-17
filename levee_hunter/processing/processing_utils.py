@@ -102,9 +102,9 @@ def remove_invalid_images(images: list, targets: list) -> Tuple[list, list]:
         raise ValueError("Targets should be a list of numpy arrays.")
     if not len(images) == len(targets):
         raise ValueError("Images and targets should have the same length.")
-    if not isinstance(images[0], xarray.DataArray):
+    if len(images) != 0 and not isinstance(images[0], xarray.DataArray):
         raise ValueError("Each element of images should be a xarray.DataArray.")
-    if not isinstance(targets[0], np.ndarray):
+    if len(targets) != 0 and not isinstance(targets[0], np.ndarray):
         raise ValueError("Each element of targets should be a numpy array.")
 
     # Images is a list of xarray.DataArray, each being (1, H, W)
@@ -146,9 +146,9 @@ def remove_empty_images(
         raise ValueError("Targets should be a list of numpy arrays.")
     if not len(images) == len(targets):
         raise ValueError("Images and targets should have the same length.")
-    if not isinstance(images[0], xarray.DataArray):
+    if len(images) != 0 and not isinstance(images[0], xarray.DataArray):
         raise ValueError("Each element of images should be a xarray.DataArray.")
-    if not isinstance(targets[0], np.ndarray):
+    if len(targets) != 0 and not isinstance(targets[0], np.ndarray):
         raise ValueError("Each element of targets should be a numpy array.")
 
     # targets is a list of N np.ndarrays, each being (1, H, W)

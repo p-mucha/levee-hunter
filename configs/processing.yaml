@@ -48,7 +48,7 @@ testing_1m:
   # If null, will use find_root_dir(); otherwise, specify a path to your project root dir.
   root_dir: "/share/gpu5/pmucha/fathom/levee-hunter"
 
-  # Data directory inside the root directory.
+  # Data directory inside the root directory, with .tif files.
   input_dir: "data/raw/1m_resolution"
 
   # If null, will assume it is root_dir / "data/raw/levees/levees.gpkg".

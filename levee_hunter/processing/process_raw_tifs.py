@@ -97,10 +97,18 @@ def main():
             overlap=config["overlap"],
         )
 
+        # If no valid patches remain after filtering, skip this tif file.
+        if not smaller_images:
+            continue
+
         # remove invalid images and their corresponding masks
         smaller_images, smaller_targets = remove_invalid_images(
             images=smaller_images, targets=smaller_targets
         )
+
+        # If no valid patches remain after filtering, skip this tif file.
+        if not smaller_images:
+            continue
 
         # remove empty images and their corresponding masks, keep some fraction of empty images
         # determined by keep_empty parameter
@@ -110,6 +118,10 @@ def main():
             keep_empty=config["keep_empty"],
             inverted=config["invert"],
         )
+
+        # If no valid patches remain after filtering, skip this tif file.
+        if not smaller_images:
+            continue
 
         # ------------------ Saving the images and masks ------------------#
 
