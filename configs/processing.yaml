@@ -1,0 +1,83 @@
+# This is my configuration file for processing raw data.
+
+testing_1m:
+  description: "Default configuration for processing raw data."
+
+  # If null, will use find_root_dir(); otherwise, specify a path to your project root dir.
+  root_dir: null
+
+  # Data directory inside the root directory, with .tif files.
+  input_dir: "data/raw/w2-Lidar"
+
+  # If null, will assume it is root_dir / "data/raw/levees/levees.gpkg".
+  #levees_path: "/share/gpu5/pmucha/fathom/levee-hunter/data/raw/w1-Kickoff/us_levees_n38w122.gpkg"
+  levees_path: "/share/gpu5/pmucha/fathom/levee-hunter/data/raw/levees/levees.gpkg"
+
+  # Output directory inside the root directory.
+  output_dir: "data/intermediate"
+
+  # Resolution of the input data.
+  # '1m' stands for 1 meter; another option might be '13' for 1/3 arc second.
+  resolution: "1m"
+
+  # Final size of the images after splitting.
+  final_size: 1500
+
+  # Overlap of the images after splitting.
+  overlap: 0
+
+  # Percentage of empty images to keep.
+  keep_empty: 0.2
+
+  # Invert the images. If true, then 0 pixels will be target and 1 pixels will be background.
+  invert: true
+
+  # Mask configuration: Set mask_type to null if not used.
+  mask_type: null
+
+  # Dilation size (default value).
+  dilation_size: 10
+
+  # Gaussian sigma (default value).
+  gaussian_sigma: 5
+
+##########################################################################################
+1m_1024:
+  description: "Default configuration for processing raw data."
+
+  # If null, will use find_root_dir(); otherwise, specify a path to your project root dir.
+  root_dir: "/share/gpu5/pmucha/fathom/levee-hunter"
+
+  # Data directory inside the root directory.
+  input_dir: "data/raw/1m_resolution"
+
+  # If null, will assume it is root_dir / "data/raw/levees/levees.gpkg".
+  levees_path: "/share/gpu5/pmucha/fathom/levee-hunter/data/raw/levees/levees.gpkg"
+
+  # Output directory inside the root directory.
+  output_dir: "data/intermediate"
+
+  # Resolution of the input data.
+  # '1m' stands for 1 meter; another option might be '13' for 1/3 arc second.
+  resolution: "1m"
+
+  # Final size of the images after splitting.
+  final_size: 1024
+
+  # Overlap of the images after splitting.
+  overlap: 0
+
+  # Percentage of empty images to keep.
+  keep_empty: 0.2
+
+  # Invert the images. If true, then 0 pixels will be target and 1 pixels will be background.
+  invert: true
+
+  # Mask configuration: Set mask_type to null if not used.
+  mask_type: null
+
+  # Dilation size (default value).
+  dilation_size: 10
+
+  # Gaussian sigma (default value).
+  gaussian_sigma: 5
