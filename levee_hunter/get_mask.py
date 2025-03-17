@@ -50,13 +50,27 @@ def get_mask(
         if gaussian_sigma != 5.0:
             warnings.warn("gaussian_sigma will be ignored if mask_type is None.")
 
+    if not isinstance(tif_image, xarray.DataArray):
+        raise ValueError("tif_image must be an xarray.DataArray.")
+
+    # Check if the CRS of the levees is the same as the tif image
+    # When working on version 2.0, suddenly reprojecting levees
+    # was extremely slow. I therefore decided to reproject the tif
+    # instead. This is used to find levees in extent,
+    # next we reproject those levees which should be fast as those should be
+    # a few levees usually. # <- those lines are affected by this temp fix
+    if levees.crs != tif_image.rio.crs:
+        tif_image_reprojected = tif_image.rio.reproject(levees.crs)  # <-
+
     transform = tif_image.rio.transform()  # Affine transformation
     shape = tif_image.shape[-2:]  # Shape of the raster (rows, cols)
 
     # Filter levees that intersect the tif extent
-    extent_geom = tif_image.rio.bounds()  # Bounds of the tif image
+    extent_geom = tif_image_reprojected.rio.bounds()  # Bounds of the tif image # <-
     extent_box = box(*extent_geom)  # Define bounding box as shapely geometry
-    levees_in_extent = levees[levees.intersects(extent_box)]
+    levees_in_extent = levees[levees.intersects(extent_box)].to_crs(
+        tif_image.rio.crs
+    )  # <-
 
     # Rasterize levees onto the same grid as the tif
     levee_raster = rasterize(
