@@ -134,10 +134,26 @@ def main():
         # so they will have the same name but different format: 0_current_ID.npy
         current_file_id = generate_file_id_from_name(current_tif_file)
 
-        # Inside intermediate, there will be directory for dataset at given {resolution}_{final_size}
-        # Inside this directory, there will be images and masks directory
-        images_dir = root_dir / f"data/intermediate/{resolution}_{final_size}/images"
-        masks_dir = root_dir / f"data/intermediate/{resolution}_{final_size}/masks"
+        # if output_dir is specified, then save the images and masks there
+        if config["output_dir"] is not None:
+            images_dir = (
+                root_dir
+                / Path(config["output_dir"])
+                / f"{resolution}_{final_size}/images"
+            )
+            masks_dir = (
+                root_dir
+                / Path(config["output_dir"])
+                / f"{resolution}_{final_size}/masks"
+            )
+        else:
+            # Default option if None
+            # Inside intermediate, there will be directory for dataset at given {resolution}_{final_size}
+            # Inside this directory, there will be images and masks directory
+            images_dir = (
+                root_dir / f"data/intermediate/{resolution}_{final_size}/images"
+            )
+            masks_dir = root_dir / f"data/intermediate/{resolution}_{final_size}/masks"
 
         # Create directories if they do not exist
         images_dir.mkdir(parents=True, exist_ok=True)
