@@ -1,7 +1,9 @@
+import os
 import numpy as np
 from typing import Tuple
 import warnings
 import xarray
+import rioxarray
 
 
 def split_images(
@@ -42,7 +44,8 @@ def split_images(
 
     if len(targets.shape) == 4:
         if targets.shape[1] != 1:
-            raise ValueError("The channel dimension of the target should be 1.")
+            raise ValueError(
+                "The channel dimension of the target should be 1.")
         targets = targets.squeeze(1)
 
     smaller_images = []
@@ -63,12 +66,13 @@ def split_images(
                 # Notice since image = images[image_no], it is a single
                 # xarray.DataArray with shape (1, H, W)
                 # targets was originally (N, H, W), so target is (H, W)
-                smaller_image = image[:, i : i + final_size, j : j + final_size]
-                smaller_target = target[i : i + final_size, j : j + final_size]
+                smaller_image = image[:, i: i + final_size, j: j + final_size]
+                smaller_target = target[i: i + final_size, j: j + final_size]
 
                 # Reshape to (1, H, W), no need to do it for smaller_image,
                 # since it is already in that shape
-                smaller_target = smaller_target.reshape(1, *smaller_target.shape)
+                smaller_target = smaller_target.reshape(
+                    1, *smaller_target.shape)
 
                 smaller_images.append(smaller_image)
                 smaller_targets.append(smaller_target)
@@ -103,7 +107,8 @@ def remove_invalid_images(images: list, targets: list) -> Tuple[list, list]:
     if not len(images) == len(targets):
         raise ValueError("Images and targets should have the same length.")
     if len(images) != 0 and not isinstance(images[0], xarray.DataArray):
-        raise ValueError("Each element of images should be a xarray.DataArray.")
+        raise ValueError(
+            "Each element of images should be a xarray.DataArray.")
     if len(targets) != 0 and not isinstance(targets[0], np.ndarray):
         raise ValueError("Each element of targets should be a numpy array.")
 
@@ -147,7 +152,8 @@ def remove_empty_images(
     if not len(images) == len(targets):
         raise ValueError("Images and targets should have the same length.")
     if len(images) != 0 and not isinstance(images[0], xarray.DataArray):
-        raise ValueError("Each element of images should be a xarray.DataArray.")
+        raise ValueError(
+            "Each element of images should be a xarray.DataArray.")
     if len(targets) != 0 and not isinstance(targets[0], np.ndarray):
         raise ValueError("Each element of targets should be a numpy array.")
 
@@ -167,7 +173,8 @@ def remove_empty_images(
 
     # Get non-empty and empty images and targets
     empty_images = [images[i] for i in empty_indices]
-    non_empty_images = [images[i] for i in range(len(images)) if i not in empty_indices]
+    non_empty_images = [images[i]
+                        for i in range(len(images)) if i not in empty_indices]
     empty_targets = [targets[i] for i in empty_indices]
     non_empty_targets = [
         targets[i] for i in range(len(targets)) if i not in empty_indices
@@ -188,3 +195,71 @@ def remove_empty_images(
     assert len(non_empty_images) == len(non_empty_targets)
 
     return non_empty_images, non_empty_targets
+
+
+def filter_single_image_by_overlap(image_path, bounds_file, threshold=25):
+    """
+    Filters a single new image based on overlap with existing accepted image bounds.
+
+    Parameters:
+    image_path (str): Path to the new image to be filtered.
+    bounds_file (str): Path to the text file storing accepted image bounds.
+    threshold (int, optional): The percentage overlap threshold to filter images. Default is 25.
+
+    Returns:
+    bool: True if the image is accepted, False if rejected.
+    """
+
+    # Example usage:
+    # image_path = "/path/to/new/image.tif"
+    # bounds_file = "/path/to/bounds.txt"
+    # result = filter_single_image_by_overlap(image_path, bounds_file)
+
+    def calculate_overlap_percentage(bounds1, bounds2):
+        overlap_xmin = max(bounds1[0], bounds2[0])
+        overlap_ymin = max(bounds1[1], bounds2[1])
+        overlap_xmax = min(bounds1[2], bounds2[2])
+        overlap_ymax = min(bounds1[3], bounds2[3])
+
+        if overlap_xmin < overlap_xmax and overlap_ymin < overlap_ymax:
+            overlap_area = (overlap_xmax - overlap_xmin) * \
+                (overlap_ymax - overlap_ymin)
+            area1 = (bounds1[2] - bounds1[0]) * (bounds1[3] - bounds1[1])
+            area2 = (bounds2[2] - bounds2[0]) * (bounds2[3] - bounds2[1])
+            percentage_overlap1 = (overlap_area / area1) * 100
+            percentage_overlap2 = (overlap_area / area2) * 100
+            return max(percentage_overlap1, percentage_overlap2)
+        return 0
+
+    # Check image CRS and get bounds
+    img = rioxarray.open_rasterio(image_path)
+    if img.rio.crs.to_epsg() != 3717:
+        print(
+            f"Image {os.path.basename(image_path)} is not in the correct CRS (EPSG:3717)")
+        return False
+
+    new_bounds = img.rio.bounds()
+
+    # Load existing bounds from the bounds file (if it exists)
+    existing_bounds_list = []
+    if os.path.exists(bounds_file):
+        with open(bounds_file, 'r') as f:
+            for line in f:
+                existing_bounds_list.append(
+                    tuple(map(float, line.strip().split(','))))
+
+    # Compare the new image with existing bounds
+    for existing_bounds in existing_bounds_list:
+        overlap_percentage = calculate_overlap_percentage(
+            new_bounds, existing_bounds)
+        if overlap_percentage > threshold:
+            print(
+                f"Image {os.path.basename(image_path)} rejected due to {overlap_percentage:.2f}% overlap.")
+            return False
+
+    # If no significant overlap, accept the image and append its bounds to the file
+    with open(bounds_file, 'a') as f:
+        f.write(','.join(map(str, new_bounds)) + '\n')
+
+    print(f"Image {os.path.basename(image_path)} accepted.")
+    return True
