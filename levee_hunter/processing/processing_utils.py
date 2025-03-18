@@ -1,7 +1,9 @@
+import os
 import numpy as np
 from typing import Tuple
 import warnings
 import xarray
+import rioxarray
 
 
 def split_images(
@@ -188,3 +190,70 @@ def remove_empty_images(
     assert len(non_empty_images) == len(non_empty_targets)
 
     return non_empty_images, non_empty_targets
+
+def filter_images_by_overlap(new_images_dir, existing_images_dir, threshold=25):
+   """
+   Filters new images based on overlap with existing images in the filtered_images_dir.
+   
+   Parameters:
+   new_images_dir (str): Directory containing new images to be filtered.
+   existing_images_dir (str): Directory containing existing images to compare with.
+   threshold (int, optional): The percentage overlap threshold to filter images. Default is 25.
+   
+   Returns:
+   list: A list of filtered new images that do not overlap with existing images beyond the threshold.
+   """
+   
+   # Example usage:
+   # new_images_dir = "/path/to/new/images"
+   # filtered_images_dir = "/path/to/filtered/images"
+   # filtered_new_images = filter_images_by_overlap(new_images_dir, filtered_images_dir, threshold=25)
+
+   def calculate_overlap_percentage(bounds1, bounds2):
+      overlap_xmin = max(bounds1[0], bounds2[0])
+      overlap_ymin = max(bounds1[1], bounds2[1])
+      overlap_xmax = min(bounds1[2], bounds2[2])
+      overlap_ymax = min(bounds1[3], bounds2[3])
+
+      if overlap_xmin < overlap_xmax and overlap_ymin < overlap_ymax:
+         overlap_area = (overlap_xmax - overlap_xmin) * (overlap_ymax - overlap_ymin)
+         area1 = (bounds1[2] - bounds1[0]) * (bounds1[3] - bounds1[1])
+         area2 = (bounds2[2] - bounds2[0]) * (bounds2[3] - bounds2[1])
+         percentage_overlap1 = (overlap_area / area1) * 100
+         percentage_overlap2 = (overlap_area / area2) * 100
+         return max(percentage_overlap1, percentage_overlap2)
+      return 0
+
+   # Importing the new Lidar data (.tif files)
+   new_tif_files = [file for file in os.listdir(new_images_dir) if file.endswith(".tif")]
+   # Check all new images are in the CRS EPSG:3717
+   for file in new_tif_files:
+      img = rioxarray.open_rasterio(os.path.join(new_images_dir, file))
+      if img.rio.crs.to_epsg() != 3717:
+         print(f"Image {file} is not in the correct CRS (EPSG:3717)")
+         return
+   # Get the bounds of the new images
+   new_tif_bounds = [img.rio.bounds() for img in new_tif_files]
+
+   # Load existing images and get their bounds
+   existing_images = [file for file in os.listdir(existing_images_dir) if file.endswith(".tif")]
+   existing_bounds_list = [img.rio.bounds() for img in existing_images]
+
+   # Filter new images based on overlap with existing images
+   filtered_new_images = []
+   filtered_new_bounds_list = []
+
+   for i, new_bounds in enumerate(new_tif_bounds):
+      overlap_found = False
+      for existing_bounds in existing_bounds_list:
+         overlap_percentage = calculate_overlap_percentage(new_bounds, existing_bounds)
+         if overlap_percentage > threshold:
+            overlap_found = True
+            break
+      if not overlap_found:
+         filtered_new_images.append(new_tif_files[i])
+         filtered_new_bounds_list.append(new_bounds)
+
+   print("Number of new images removed:", (len(new_tif_files)-len(filtered_new_images)))
+
+   return filtered_new_images
