@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 import rioxarray
+import time
+import warnings
 
 from levee_hunter.plots import plot_img_and_target
 from levee_hunter.processing.apply_mask_type import apply_mask_type
@@ -29,11 +31,20 @@ def interactive_images_selection(
     # the initial processing step, where we split the images
     intermediate_data_path = Path(intermediate_data_path)
 
+    # This should be the processed directory where we will move the selected images
+    # for example something like /path/to/data/processed/{resolution}_{size}
+    output_dir = Path(output_dir)
+
     if not intermediate_data_path.exists():
         raise ValueError("Intermediate data path does not exist.")
 
     if not intermediate_data_path.is_dir():
         raise ValueError("Intermediate data path should be a directory.")
+
+    if not "processed" in output_dir.parts:
+        warnings.warn(
+            "The output directory is not inside the /data/processed directory. This is not recommended."
+        )
 
     # images dir holds .tif files
     # masks dir holds .npy files
@@ -54,6 +65,8 @@ def interactive_images_selection(
 
     print(f"Found {len(tif_files)} images and {len(mask_files)} masks.")
     print("\n ---------------Starting interactive images selection.--------------- \n")
+    # Wait for 2 seconds before proceeding.
+    time.sleep(2)
 
     # Loop over tif files inside the images directory
     for i in range(len(tif_files)):
@@ -71,8 +84,6 @@ def interactive_images_selection(
         current_img = rioxarray.open_rasterio(str(current_tif_file))
         current_mask = np.load(current_mask_file)
 
-        print(f"Currently processing: {current_filename}")
-
         # Need to dilate before plotting, this is only for visualization
         current_mask = apply_mask_type(
             mask=current_mask,
@@ -80,7 +91,8 @@ def interactive_images_selection(
             dilation_size=dilation_size,
             inverted=True,
         )
-
+        print(f"Progress: {i+1}/{len(tif_files)} \n")
+        print(f"Currently Processing: {current_tif_file}")
         # plot them side by side
         plot_img_and_target(
             current_img.values.squeeze(), current_mask.squeeze(), figsize=figsize
@@ -103,10 +115,50 @@ def interactive_images_selection(
 
         elif user_input == "keep" or user_input == "a":
             print("Moved to processed")
+            # Ensure the "images" subdirectory exists.
+            output_images_dir = output_dir / "images"
+            output_images_dir.mkdir(parents=True, exist_ok=True)
+            # Construct the new filename by appending "_w1" before the extension.
+            tif_output = (
+                output_images_dir
+                / f"{current_tif_file.stem}_w1{current_tif_file.suffix}"
+            )
+
+            # Ensure the "masks" subdirectory exists.
+            output_masks_dir = output_dir / "masks"
+            output_masks_dir.mkdir(parents=True, exist_ok=True)
+            # Construct the new filename by appending "_w1" before the extension.
+            mask_output = (
+                output_masks_dir
+                / f"{current_mask_file.stem}_w1{current_mask_file.suffix}"
+            )
+
+            current_tif_file.rename(tif_output)
+            current_mask_file.rename(mask_output)
 
         elif user_input == "special" or user_input == "w":
-            # rename to w2
-            print("Moved to special")
+            print("Moved to processed, with weight 2")
+            # Ensure the "images" subdirectory exists.
+            output_images_dir = output_dir / "images"
+            output_images_dir.mkdir(parents=True, exist_ok=True)
+            # Construct the new filename by appending "_w1" before the extension.
+            tif_output = (
+                output_images_dir
+                / f"{current_tif_file.stem}_w2{current_tif_file.suffix}"
+            )
+
+            # Ensure the "masks" subdirectory exists.
+            output_masks_dir = output_dir / "masks"
+            output_masks_dir.mkdir(parents=True, exist_ok=True)
+            # Construct the new filename by appending "_w1" before the extension.
+            mask_output = (
+                output_masks_dir
+                / f"{current_mask_file.stem}_w2{current_mask_file.suffix}"
+            )
+
+            # Move the files to processed
+            current_tif_file.rename(tif_output)
+            current_mask_file.rename(mask_output)
 
         elif user_input == "remove" or user_input == "d":
             pass  # do nothing, skip this image
