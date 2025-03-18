@@ -8,6 +8,7 @@ import warnings
 
 from levee_hunter.plots import plot_img_and_target
 from levee_hunter.processing.apply_mask_type import apply_mask_type
+from levee_hunter.processing.processing_utils import filter_single_image_by_overlap
 
 
 def interactive_images_selection(
@@ -68,6 +69,15 @@ def interactive_images_selection(
     # Wait for 2 seconds before proceeding.
     time.sleep(2)
 
+    def update_bounds_file(bounds_file_path, current_img_5070):
+        bounds = (
+            current_img_5070.rio.bounds()
+        )  # e.g. (-2198313.241384246, 1234567.89, -2198313.241384245, 1234567.90)
+        # Create a comma-separated string without parentheses
+        bounds_str = ",".join(map(str, bounds))
+        with open(bounds_file_path, "a") as file:
+            file.write(f"{bounds_str}\n")
+
     # Loop over tif files inside the images directory
     for i in range(len(tif_files)):
         # Clear previous output while keeping logs
@@ -83,6 +93,35 @@ def interactive_images_selection(
         # Load the image and mask
         current_img = rioxarray.open_rasterio(str(current_tif_file))
         current_mask = np.load(current_mask_file)
+
+        #########################################
+        # At this step, we check if our current_img overlaps with any previously accepted images
+        # If it does, we skip this image and move to the next one
+        # This is done to avoid having multiple images of the same area in the dataset
+        # First we will always convert to the same CRS, then using the existing list of bounds
+        # in the bounds.txt, we check for overlap, if there is no overlap,
+        # we present the image to the user, if user accepts it, we need to update
+        # the bounds.txt file with the new bounds, and the file is moved to processed
+        current_img_5070 = current_img.rio.reproject("EPSG:5070")
+
+        bounds_file_path = output_dir / "bounds.txt"
+
+        # Create an empty bounds file if it does not exist
+        if not bounds_file_path.exists():
+            # make parent dir if does not exist yet
+            bounds_file_path.parent.mkdir(parents=True, exist_ok=True)
+            bounds_file_path.touch()
+
+        no_overlap = filter_single_image_by_overlap(
+            tif_img=current_img_5070, bounds_file=bounds_file_path, threshold=10
+        )
+
+        # if there is overlap, skip this image, go to next loop iteration
+        # (next tig file)
+        if no_overlap == False:
+            # Wait for 2 seconds before proceeding.
+            time.sleep(2)
+            continue
 
         # Need to dilate before plotting, this is only for visualization
         current_mask = apply_mask_type(
@@ -110,13 +149,15 @@ def interactive_images_selection(
             .lower()
         )
 
+        output_images_dir = output_dir / "images"
+        output_masks_dir = output_dir / "masks"
+
         if user_input == "q" or user_input == "quit":
             return
 
         elif user_input == "keep" or user_input == "a":
             print("Moved to processed")
             # Ensure the "images" subdirectory exists.
-            output_images_dir = output_dir / "images"
             output_images_dir.mkdir(parents=True, exist_ok=True)
             # Construct the new filename by appending "_w1" before the extension.
             tif_output = (
@@ -125,7 +166,6 @@ def interactive_images_selection(
             )
 
             # Ensure the "masks" subdirectory exists.
-            output_masks_dir = output_dir / "masks"
             output_masks_dir.mkdir(parents=True, exist_ok=True)
             # Construct the new filename by appending "_w1" before the extension.
             mask_output = (
@@ -136,10 +176,12 @@ def interactive_images_selection(
             current_tif_file.rename(tif_output)
             current_mask_file.rename(mask_output)
 
+            # Update the bounds file with the new bounds
+            update_bounds_file(bounds_file_path, current_img_5070)
+
         elif user_input == "special" or user_input == "w":
             print("Moved to processed, with weight 2")
             # Ensure the "images" subdirectory exists.
-            output_images_dir = output_dir / "images"
             output_images_dir.mkdir(parents=True, exist_ok=True)
             # Construct the new filename by appending "_w1" before the extension.
             tif_output = (
@@ -148,7 +190,6 @@ def interactive_images_selection(
             )
 
             # Ensure the "masks" subdirectory exists.
-            output_masks_dir = output_dir / "masks"
             output_masks_dir.mkdir(parents=True, exist_ok=True)
             # Construct the new filename by appending "_w1" before the extension.
             mask_output = (
@@ -160,8 +201,11 @@ def interactive_images_selection(
             current_tif_file.rename(tif_output)
             current_mask_file.rename(mask_output)
 
+            # Update the bounds file with the new bounds
+            update_bounds_file(bounds_file_path, current_img_5070)
+
         elif user_input == "remove" or user_input == "d":
-            pass  # do nothing, skip this image
+            pass  # do nothing, skip this image, do not update bounds
 
         else:
             print("Invalid input. Please try again.")
