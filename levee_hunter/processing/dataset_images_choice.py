@@ -5,9 +5,26 @@ from pathlib import Path
 import rioxarray
 
 from levee_hunter.plots import plot_img_and_target
+from levee_hunter.processing.apply_mask_type import apply_mask_type
 
 
-def interactive_images_selection(intermediate_data_path: str, output_dir: str) -> None:
+def interactive_images_selection(
+    intermediate_data_path: str,
+    output_dir: str,
+    dilation_size: int = 10,
+    figsize: tuple = (12, 6),
+) -> None:
+    """
+    Allows the user to interactively select images to keep, remove, or mark as special.
+
+    Inputs:
+    - intermediate_data_path: str, path to the intermediate directory, should have the images and masks directories.
+    - output_dir: str, path to the output directory.
+    - dilation_size: int, size of the dilation kernel, Visualisation ONLY.
+
+    Outputs:
+    - None, saves the selected images to the output directory.
+    """
     # This should be directory with images and masks directories creatd at
     # the initial processing step, where we split the images
     intermediate_data_path = Path(intermediate_data_path)
@@ -56,10 +73,18 @@ def interactive_images_selection(intermediate_data_path: str, output_dir: str) -
 
         print(f"Currently processing: {current_filename}")
 
-        # Need to dilate before plotting
+        # Need to dilate before plotting, this is only for visualization
+        current_mask = apply_mask_type(
+            mask=current_mask,
+            mask_type="dilated",
+            dilation_size=dilation_size,
+            inverted=True,
+        )
 
         # plot them side by side
-        plot_img_and_target(current_img.values.squeeze(), current_mask.squeeze())
+        plot_img_and_target(
+            current_img.values.squeeze(), current_mask.squeeze(), figsize=figsize
+        )
 
         # Add an extra plt.pause to ensure previous figures are removed
         plt.pause(0.15)  # Small pause to let Jupyter process figure update
