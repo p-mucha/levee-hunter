@@ -4,13 +4,17 @@
 ## Table of Contents 
 - [Installation](#installation)
 - [Getting Data](#getting-data)
+- [Getting Started](#getting-started)
 - [Computing on Hypatia](#computing-on-hypatia)
 - [Recreating Environment on Hypatia](#recreating-environment-on-hypatia)
 
 ## Installation
+The environment.yml can be used to create a python environment with required dependencies. 
+For details please see [Recreating Environment on Hypatia](#recreating-environment-on-hypatia).
 
-To install Levee Hunter, clone this repository and install:
 
+The levee-hunter can then for example be installed into that environment.
+To install levee-hunter, clone this repository and install:
 
 ```bash
 git clone https://github.com/p-mucha/levee-hunter.git
@@ -24,9 +28,27 @@ A useful tutorial notebook is located inside the tutorial/ directory.
 
 
 ## Getting Data
+To download new data, please see [data_downloader](./data_downloader).
 
-All data files can be found on Hypatia at:
+The existing data files can be found on Hypatia at:
 `/share/gpu5/pmucha/fathom/levee-hunter/data/`
+
+## Getting Started
+
+<pre>
+data
+ ├─ files_db
+ │   └─ create_db.py
+ ├─ raw
+ │   ├─ 1m_resolution
+ │   │   ├─ file1.tif
+ │   │   └─ file2.tif
+ │   └─ 13_resolution
+ │       ├─ fileA.tif
+ │       └─ fileB.tif
+ ├─ intermediate
+ └─ processed
+</pre>
 
 ## Computing on Hypatia
 1. **login-node**: A login to the Hypatia cluster is through the login node. After user ssh to hypatia, the terminal will show [username]@hypatia-login, which means user is on the login-node. 
