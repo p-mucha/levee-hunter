@@ -1,5 +1,8 @@
 # This is my configuration file for processing raw data.
 
+# Please note: output_dir should not contain {resolution}_{size} 
+# as it will be added automatically by the processing script.
+
 testing_1m:
   description: "Default configuration for processing raw data."
 
