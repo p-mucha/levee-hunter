@@ -21,6 +21,7 @@ setup(
     entry_points={
         "console_scripts": [
             "process-raw=levee_hunter.processing.process_raw_tifs:main",
+            "download-lidar=data_downloader.download_lidar_data:run",
         ]
     },
 )
