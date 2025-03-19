@@ -280,9 +280,9 @@ class LeveesDataset(Dataset):
             current_mask = current_mask.reshape(1, *current_mask.shape)
 
         # For training we need the image and mask as torch tensors
-        # Not providing dtype on purpose, so that torch will base it on the input
-        current_img = torch.as_tensor(current_img)
-        current_mask = torch.as_tensor(current_mask)
+        # Must be float for loss calculation
+        current_img = torch.as_tensor(current_img, dtype=torch.float32)
+        current_mask = torch.as_tensor(current_mask, dtype=torch.float32)
 
         if self.weighted:
             if self.weights is None:
