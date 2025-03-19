@@ -5,10 +5,12 @@ from pathlib import Path
 import rioxarray
 import torch
 from torch.utils.data import Dataset
+from tqdm import tqdm
 from typing import Tuple
 import warnings
 
 from levee_hunter.augmentations import TRANSFORMS
+from levee_hunter.processing.apply_mask_type import apply_mask_type
 
 
 class LeveesDataset(Dataset):
@@ -32,6 +34,11 @@ class LeveesDataset(Dataset):
         masks_dir = Path(masks_dir)
         assert images_dir.exists(), f"Path {images_dir} does not exist"
         assert masks_dir.exists(), f"Path {masks_dir} does not exist"
+
+        # convenient to keep those paths
+        # useful to create new dataset based on this one for example
+        self.images_dir = images_dir
+        self.masks_dir = masks_dir
 
         # Get all image and mask paths
         # Those are paths, not just filenames, like eg:
@@ -78,6 +85,55 @@ class LeveesDataset(Dataset):
                 raise ValueError(f"Filename {file_path.name} does not contain w1 or w2")
 
         return weights
+
+    def apply_mask_type(
+        self,
+        mask_type: str = "dilated",
+        dilation_size: int = 10,
+        gaussian_sigma: int = 5,
+        inverted: bool = True,
+    ) -> None:
+        """
+        Apply a mask type to the original mask with single pixel width levees.
+
+        Inputs:
+        - mask_type: str, type of mask to apply. Choose from 'dilated' or 'gaussian'.
+        - dilation_size: int, size of the dilation kernel.
+        - gaussian_sigma: int, standard deviation of the gaussian kernel.
+        - inverted: bool, whether the mask is inverted or not, if target pixels are 0, set to True.
+
+        Outputs:
+        - None: save the modified masks back to the original paths.
+        """
+        # we will loop over masks, for each apply the mask_type
+        for current_mask_file in tqdm(self.mask_paths, desc="Processing masks"):
+
+            # get path and load the mask, note it is in (1, H, W)
+            # which is the accepted format by the apply_mask_type function
+            current_mask = np.load(current_mask_file)
+
+            current_mask = apply_mask_type(
+                mask=current_mask,
+                mask_type=mask_type,
+                dilation_size=dilation_size,
+                gaussian_sigma=gaussian_sigma,
+                inverted=inverted,
+            )
+
+            # Save the modified mask back to the original path.
+            np.save(current_mask_file, current_mask)
+
+    @property
+    def file_ids(self) -> list:
+        """
+        Get the file IDs from the image paths.
+
+        Eg for image path:
+        /share/gpu5/pmucha/fathom/levee-hunter/data/processed/tutorial_data/1m_544/images/0_4e7e7d0aed_w1.tif
+
+        The file ID will be 4e7e7d0aed (always between two _)
+        """
+        return [img_path.stem.split("_")[1] for img_path in self.img_paths]
 
     def __load_image(
         self, idx: int, values_only: bool = True
