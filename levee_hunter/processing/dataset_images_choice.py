@@ -119,6 +119,10 @@ def interactive_images_selection(
         # if there is overlap, skip this image, go to next loop iteration
         # (next tig file)
         if no_overlap == False:
+            # remove file and go to the next one
+            current_tif_file.unlink()
+            current_mask_file.unlink()
+
             # Wait for 2 seconds before proceeding.
             time.sleep(2)
             continue
@@ -205,6 +209,9 @@ def interactive_images_selection(
             update_bounds_file(bounds_file_path, current_img_5070)
 
         elif user_input == "remove" or user_input == "d":
+            # remove file and go to the next one
+            current_tif_file.unlink()
+            current_mask_file.unlink()
             pass  # do nothing, skip this image, do not update bounds
 
         else:
