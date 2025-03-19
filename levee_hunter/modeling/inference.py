@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 
@@ -48,3 +49,45 @@ def infer(model, image_tensor, device=None, apply_sigmoid=True, threshold=0.5):
         output = output.squeeze(0)
 
     return output
+
+
+def get_preds_targets(model, val_loader, device, invert=True):
+    all_preds = []
+    all_targets = []
+    threshold = 0.5
+
+    model.eval()
+    with torch.no_grad():
+        for images, masks in val_loader:
+            # Shapes are (batch_size, 1, height, width) for both
+            # Note for some loaders batch_size is len(images)
+            preds = infer(
+                model,
+                image_tensor=images,
+                device=device,
+                apply_sigmoid=True,
+                threshold=threshold,
+            )
+
+            if len(preds.shape) == 3:
+                preds = preds.reshape(1, *preds.shape)
+
+            # Store results for evaluation
+            all_preds.append(preds)
+            all_targets.append(masks)
+            # print(all_preds[0].shape, all_targets[0].shape)
+
+    # Concatenate all batches into single tensors
+    all_preds = np.concatenate(all_preds, axis=0)
+    all_targets = np.concatenate(all_targets, axis=0)
+
+    if invert:
+        # Invert target masks if needed (ensure foreground is 1, background is 0)
+        all_targets = torch.tensor(1 - all_targets)
+        all_preds = torch.tensor(1 - all_preds)
+
+    # Convert to integer type (0 or 1) to satisfy `get_stats` requirements
+    all_preds = all_preds.long()
+    all_targets = all_targets.long()
+
+    return all_preds, all_targets
