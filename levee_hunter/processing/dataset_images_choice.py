@@ -6,7 +6,7 @@ import rioxarray
 import time
 import warnings
 
-from levee_hunter.plots import plot_img_and_target
+from levee_hunter.plots import plot_img_and_target, plot_img_and_target_overlay
 from levee_hunter.processing.apply_mask_type import apply_mask_type
 from levee_hunter.processing.processing_utils import filter_single_image_by_overlap
 
@@ -16,6 +16,8 @@ def interactive_images_selection(
     output_dir: str,
     dilation_size: int = 10,
     figsize: tuple = (12, 6),
+    cmap: str = "viridis",
+    plot_overlay: bool = True,
 ) -> None:
     """
     Allows the user to interactively select images to keep, remove, or mark as special.
@@ -136,13 +138,29 @@ def interactive_images_selection(
         )
         print(f"Progress: {i+1}/{len(tif_files)} \n")
         print(f"Currently Processing: {current_tif_file}")
-        # plot them side by side
-        plot_img_and_target(
-            current_img.values.squeeze(), current_mask.squeeze(), figsize=figsize
-        )
+
+        # -------------------------------- Plotting Here --------------------------------
+        if plot_overlay:
+            plot_img_and_target_overlay(
+                original_img=current_img.values.squeeze(),
+                target_img=current_mask.squeeze(),
+                figsize=figsize,
+                cmap=cmap,
+                invert=True,
+            )
+
+        else:
+            # plot them side by side
+            plot_img_and_target(
+                current_img.values.squeeze(),
+                current_mask.squeeze(),
+                figsize=figsize,
+                cmap=cmap,
+            )
 
         # Add an extra plt.pause to ensure previous figures are removed
         plt.pause(0.15)  # Small pause to let Jupyter process figure update
+        # --------------------------------------------------------------------------------
 
         # Ask user
         user_input = (
