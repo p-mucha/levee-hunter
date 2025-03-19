@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from levee_hunter.segmentation_dataset import SegmentationDataset
+from levee_hunter.levees_dataset import LeveesDataset
 from levee_hunter.paths import save_model_correctly
 
 
@@ -15,11 +15,11 @@ def train_model(
     save_model="best",
     save_model_path=None,
 ):
-    if not isinstance(train_loader.dataset, SegmentationDataset):
-        raise ValueError("train_loader.dataset must be a SegmentationDataset instance")
+    if not isinstance(train_loader.dataset, LeveesDataset):
+        raise ValueError("train_loader.dataset must be a LeveesDataset instance")
 
-    if not isinstance(val_loader.dataset, SegmentationDataset):
-        raise ValueError("val_loader.dataset must be a SegmentationDataset instance")
+    if not isinstance(val_loader.dataset, LeveesDataset):
+        raise ValueError("val_loader.dataset must be a LeveesDataset instance")
 
     if save_model not in ["best", "last"]:
         raise ValueError("save_model must be either 'best' or 'last'")
@@ -38,7 +38,7 @@ def train_model(
         train_loss = 0.0
 
         for batch in train_loader:
-            if train_loader.dataset.weights_return:
+            if train_loader.dataset.weighted:
                 images, mask, weights = batch  # Extract weights if present
                 images, mask, weights = (
                     images.to(device),
