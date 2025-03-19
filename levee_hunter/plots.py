@@ -4,7 +4,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 
-from levee_hunter.modeling.infer import infer
+from levee_hunter.modeling.inference import infer
 
 
 def infer_and_visualize_old(
@@ -375,7 +375,7 @@ def plot_img_and_target_overlay(
 
     # Plot the original image on the second axis and overlay the masked target in "Blues"
     ax1.imshow(orig, cmap=cmap)
-    ax1.imshow(masked_target, cmap="Oranges", alpha=0.9, vmin=0, vmax=2)
+    ax1.imshow(masked_target, cmap="coolwarm", alpha=1, vmin=0, vmax=1)
     ax1.set_title("Target Overlay")
     ax1.axis("off")
 
