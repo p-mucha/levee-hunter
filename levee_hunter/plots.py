@@ -306,7 +306,7 @@ def plot_selected_pixels(original_img, pred_img, figsize=(6, 6), invert=True):
     plt.show()
 
 
-def plot_img_and_target(img, target, figsize=(12, 6)):
+def plot_img_and_target(img, target, figsize=(12, 6), cmap="viridis"):
     if img.shape[0] == 1:
         img = img.squeeze()
 
@@ -316,7 +316,7 @@ def plot_img_and_target(img, target, figsize=(12, 6)):
     fig, axes = plt.subplots(1, 2, figsize=figsize)  # 1 row, 2 columns
 
     # Plot the first image
-    im = axes[0].imshow(img, cmap="viridis")
+    im = axes[0].imshow(img, cmap=cmap)
     axes[0].set_title("Lidar Image")
     axes[0].axis("off")
 
@@ -333,6 +333,62 @@ def plot_img_and_target(img, target, figsize=(12, 6)):
     axes[1].axis("off")
 
     plt.tight_layout()
+    plt.show()
+
+
+def plot_img_and_target_overlay(
+    original_img,
+    target_img,
+    figsize=(12, 4),
+    cmap="viridis",
+    invert=True,
+):
+    """
+    Plots the original image and an overlay of the target mask.
+
+    Parameters:
+    - original_img: The original image (tensor or numpy array) of shape (1, N, N).
+    - target_img: The target mask (tensor or numpy array) of shape (1, N, N).
+    - figsize: Figure size.
+    - cmap: Colormap for the original image.
+    - invert: If True, the target mask is inverted (1 - target) before overlay.
+    """
+    fig, (ax0, ax1) = plt.subplots(1, 2, figsize=figsize)
+
+    # Process the original image: if it's a tensor, move to CPU and squeeze
+    if isinstance(original_img, torch.Tensor):
+        original_img = original_img.cpu()
+    orig = original_img.squeeze()
+    im0 = ax0.imshow(orig, cmap=cmap)
+    ax0.set_title("Original Image")
+    ax0.axis("off")
+
+    # Process the target image: if it's a tensor, move to CPU and convert to numpy, then squeeze
+    if isinstance(target_img, torch.Tensor):
+        target_img = np.array(target_img.cpu())
+    target = target_img.squeeze()
+    if invert:
+        target = 1 - target
+
+    # Mask the target so that only values >= 0.5 are shown
+    masked_target = np.ma.masked_where(target < 0.5, target)
+
+    # Plot the original image on the second axis and overlay the masked target in "Blues"
+    ax1.imshow(orig, cmap=cmap)
+    ax1.imshow(masked_target, cmap="Oranges", alpha=0.9, vmin=0, vmax=2)
+    ax1.set_title("Target Overlay")
+    ax1.axis("off")
+
+    # Optionally, add a colorbar for the original image from ax0.
+    pos = ax0.get_position()  # (x0, y0, width, height)
+    x_cbar = pos.x0 + pos.width + 0.005  # adjust position as needed
+    y_cbar = pos.y0
+    cbar_width = 0.01
+    cbar_height = pos.height
+
+    cax = fig.add_axes([x_cbar, y_cbar, cbar_width, cbar_height])
+    fig.colorbar(im0, cax=cax)
+
     plt.show()
 
 
