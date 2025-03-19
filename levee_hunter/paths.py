@@ -84,6 +84,7 @@ def save_model_correctly(model, save_model_path=None):
     """
     if save_model_path is not None:
         save_model_path = Path(save_model_path)
+        save_model_path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(model.state_dict(), save_model_path)
     else:
         # Warn user that a path will be automatically generated
