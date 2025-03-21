@@ -3,167 +3,74 @@
 # Please note: output_dir should not contain {resolution}_{size} 
 # as it will be added automatically by the processing script.
 
-testing_1m:
-  description: "Default configuration for processing raw data."
+tutorial_config:
+  description: "Configuration used for the tutorial."
 
-  # If null, will use find_root_dir(); otherwise, specify a path to your project root dir.
-  root_dir: null
-
-  # Data directory inside the root directory, with .tif files.
-  input_dir: "data/raw/w2-Lidar"
+  # Data directory inside the root directory, this should be the one with the raw .tif images.
+  # If null, will attempt root_dir / "data/raw/{resolution}_resolution".
+  input_dir: "/share/gpu5/pmucha/fathom/levee-hunter/data/raw/tutorial_data"
 
   # If null, will assume it is root_dir / "data/raw/levees/levees.gpkg".
-  #levees_path: "/share/gpu5/pmucha/fathom/levee-hunter/data/raw/w1-Kickoff/us_levees_n38w122.gpkg"
   levees_path: "/share/gpu5/pmucha/fathom/levee-hunter/data/raw/levees/levees.gpkg"
 
-  # Output directory inside the root directory.
-  output_dir: "data/intermediate"
+  # This should be the full path to the output directory. 
+  # code will create {resolution}_{size} subdirectory in this directory, with images and masks subdirectories.
+  output_dir: "/share/gpu5/pmucha/fathom/levee-hunter/data/intermediate/tutorial_data"
 
   # Resolution of the input data.
   # '1m' stands for 1 meter; another option might be '13' for 1/3 arc second.
   resolution: "1m"
 
-  # Final size of the images after splitting.
-  final_size: 1500
+  # Final size of the images after splitting, in pixels.
+  # Note for segmentation models it often needs to be divisible by 32.
+  final_size: 544
 
-  # Overlap of the images after splitting.
+  # Overlap of the images after splitting. How much the smaller images will overlap with each other.
   overlap: 0
 
-  # Percentage of empty images to keep.
+  # Percentage of empty images to keep. Eg, if there are 100 non-empty, if set to 0.2, there will be 20 empty.
   keep_empty: 0.2
 
   # Invert the images. If true, then 0 pixels will be target and 1 pixels will be background.
   invert: true
 
-  # Mask configuration: Set mask_type to null if not used.
+  # Mask configuration: Set mask_type to null if not used. Other options are currently: 'dilated', 'gaussian'.
   mask_type: null
 
-  # Dilation size (default value).
+  # Dilation size (10 is the default value). 
+  # Does not matter if mask_type is null, but best to set to default value.
   dilation_size: 10
 
-  # Gaussian sigma (default value).
-  gaussian_sigma: 5
-
-##########################################################################################
-1m_1024:
-  description: "Default configuration for processing raw data."
-
-  # If null, will use find_root_dir(); otherwise, specify a path to your project root dir.
-  root_dir: "/share/gpu5/pmucha/fathom/levee-hunter"
-
-  # Data directory inside the root directory, with .tif files.
-  input_dir: "data/raw/1m_resolution"
-
-  # If null, will assume it is root_dir / "data/raw/levees/levees.gpkg".
-  levees_path: "/share/gpu5/pmucha/fathom/levee-hunter/data/raw/levees/levees.gpkg"
-
-  # Output directory inside the root directory.
-  output_dir: "data/intermediate"
-
-  # Resolution of the input data.
-  # '1m' stands for 1 meter; another option might be '13' for 1/3 arc second.
-  resolution: "1m"
-
-  # Final size of the images after splitting.
-  final_size: 1024
-
-  # Overlap of the images after splitting.
-  overlap: 0
-
-  # Percentage of empty images to keep.
-  keep_empty: 0.2
-
-  # Invert the images. If true, then 0 pixels will be target and 1 pixels will be background.
-  invert: true
-
-  # Mask configuration: Set mask_type to null if not used.
-  mask_type: null
-
-  # Dilation size (default value).
-  dilation_size: 10
-
-  # Gaussian sigma (default value).
+  # Gaussian sigma (5 is the default value).
+  # Does not matter if mask_type is null, but best to set to default value.
   gaussian_sigma: 5
 
 ##########################################################################################
 13_636:
-  description: "Default configuration for processing raw data."
+  description: "Configuration for processing 1/3 resolution raw data. Results in no pixels loss."
 
-  # If null, will use find_root_dir(); otherwise, specify a path to your project root dir.
-  root_dir: "/share/gpu5/pmucha/fathom/levee-hunter"
+  input_dir: "/share/gpu5/ucapmgb/data/raw/13_resolution_original"
 
-  # Data directory inside the root directory.
-  input_dir: "data/raw/13_resolution"
-
-  # If null, will assume it is root_dir / "data/raw/levees/levees.gpkg".
   levees_path: "/share/gpu5/pmucha/fathom/levee-hunter/data/raw/levees/levees.gpkg"
 
-  # Output directory inside the root directory.
-  output_dir: "data/intermediate"
+  output_dir: "/share/gpu5/ucapmgb/data/intermediate/"
 
-  # Resolution of the input data.
-  # '1m' stands for 1 meter; another option might be '13' for 1/3 arc second.
   resolution: "13"
 
   # Final size of the images after splitting.
   # For 1/3 arc second resolution, 636 splits the 10812 pixel image perfectly.
   final_size: 636
 
-  # Overlap of the images after splitting.
   overlap: 0
 
-  # Percentage of empty images to keep.
   keep_empty: 0.2
 
-  # Invert the images. If true, then 0 pixels will be target and 1 pixels will be background.
   invert: true
 
-  # Mask configuration: Set mask_type to null if not used.
   mask_type: null
 
-  # Dilation size (default value).
-  dilation_size: 1
-
-  # Gaussian sigma (default value).
-  gaussian_sigma: 1
-
-##########################################################################################
-tutorial_config:
-  description: "Configuration used for the tutorial."
-
-  # If null, will use find_root_dir(); otherwise, specify a path to your project root dir.
-  root_dir: null
-
-  # Data directory inside the root directory, with .tif files.
-  input_dir: "data/raw/tutorial_data"
-
-  # If null, will assume it is root_dir / "data/raw/levees/levees.gpkg".
-  levees_path: "/share/gpu5/pmucha/fathom/levee-hunter/data/raw/levees/levees.gpkg"
-
-  # Output directory inside the root directory.
-  output_dir: "data/intermediate/tutorial_data"
-
-  # Resolution of the input data.
-  # '1m' stands for 1 meter; another option might be '13' for 1/3 arc second.
-  resolution: "1m"
-
-  # Final size of the images after splitting.
-  final_size: 544
-
-  # Overlap of the images after splitting.
-  overlap: 0
-
-  # Percentage of empty images to keep.
-  keep_empty: 0.2
-
-  # Invert the images. If true, then 0 pixels will be target and 1 pixels will be background.
-  invert: true
-
-  # Mask configuration: Set mask_type to null if not used.
-  mask_type: null
-
-  # Dilation size (default value).
   dilation_size: 10
 
-  # Gaussian sigma (default value).
   gaussian_sigma: 5
+
+##########################################################################################
