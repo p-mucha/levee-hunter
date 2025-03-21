@@ -55,16 +55,24 @@ def interactive_images_selection(
     masks_dir = intermediate_data_path / "masks"
     if not images_dir.exists() or not masks_dir.exists():
         raise ValueError(
-            "Images and targets directories should exist within the intermediate_data_path."
+            "Images and masks directories should exist within the intermediate_data_path."
         )
 
-    # This will return a list of full paths to the files
-    tif_files = list(images_dir.glob("*.tif"))
-    mask_files = list(masks_dir.glob("*.npy"))
+    # This will return a sorted list of full paths to the files
+    tif_files = sorted(images_dir.glob("*.tif"))
+    mask_files = sorted(masks_dir.glob("*.npy"))
 
     # if no files found, error
     if len(tif_files) == 0 or len(mask_files) == 0:
         raise ValueError("No TIF files found in images or targets directories.")
+
+
+    # Allow user to provide a list of file_IDs of files they want to process
+    # something like:
+    # if file_ids_toprocess:
+    # tif_files = [tif_file for tif_file in tif_files if tif_file.stem.strip('_')[1] in file_ids_toprocess]
+    # similarly for the mask_files.
+    # This requires a bit of testing but should be added today.
 
     print(f"Found {len(tif_files)} images and {len(mask_files)} masks.")
     print("\n ---------------Starting interactive images selection.--------------- \n")
