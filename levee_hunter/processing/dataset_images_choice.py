@@ -18,6 +18,7 @@ def interactive_images_selection(
     figsize: tuple = (12, 6),
     cmap: str = "viridis",
     plot_overlay: bool = True,
+    file_ids_toprocess: list = None,
 ) -> None:
     """
     Allows the user to interactively select images to keep, remove, or mark as special.
@@ -26,6 +27,11 @@ def interactive_images_selection(
     - intermediate_data_path: str, path to the intermediate directory, should have the images and masks directories.
     - output_dir: str, path to the output directory.
     - dilation_size: int, size of the dilation kernel, Visualisation ONLY.
+    - figsize: tuple, size of the figure.
+    - cmap: str, colormap to use for plotting.
+    - plot_overlay: bool, if false, will plot mask next to the image, if true, will plot image and next to it, the image
+        with the target pixels overlayed.
+    - file_ids_toprocess: list, list of file IDs to process. If None, all files will be processed.
 
     Outputs:
     - None, saves the selected images to the output directory.
@@ -59,6 +65,8 @@ def interactive_images_selection(
         )
 
     # This will return a sorted list of full paths to the files
+    # although actually sorting is not necessary, because we get
+    # mask filename based on the current tif filename anyway
     tif_files = sorted(images_dir.glob("*.tif"))
     mask_files = sorted(masks_dir.glob("*.npy"))
 
@@ -66,15 +74,26 @@ def interactive_images_selection(
     if len(tif_files) == 0 or len(mask_files) == 0:
         raise ValueError("No TIF files found in images or targets directories.")
 
-
     # Allow user to provide a list of file_IDs of files they want to process
-    # something like:
-    # if file_ids_toprocess:
-    # tif_files = [tif_file for tif_file in tif_files if tif_file.stem.strip('_')[1] in file_ids_toprocess]
-    # similarly for the mask_files.
-    # This requires a bit of testing but should be added today.
+    # Choose only those tifs which have file ID in the provided list.
+    # This is a simple way for multiple users to be selecting images at the same time.
+    # Since we get mask files based on the current tif file name, there is no need to
+    # filter mask files in the same way.
+    if file_ids_toprocess:
+        if not isinstance(file_ids_toprocess, list):
+            raise ValueError("file_ids_toprocess should be a list of strings.")
+        if not isinstance(file_ids_toprocess[0], str):
+            raise ValueError("file_ids_toprocess should be a list of strings.")
+        # Filter tif files based on the file_ids_toprocess
+        tif_files = [
+            tif_file
+            for tif_file in tif_files
+            if tif_file.stem.split("_")[1] in file_ids_toprocess
+        ]
+        print(f"Found {len(tif_files)} images to process.")
+    else:
+        print(f"Found {len(tif_files)} images and {len(mask_files)} masks.")
 
-    print(f"Found {len(tif_files)} images and {len(mask_files)} masks.")
     print("\n ---------------Starting interactive images selection.--------------- \n")
     # Wait for 2 seconds before proceeding.
     time.sleep(2)
@@ -133,8 +152,8 @@ def interactive_images_selection(
             current_tif_file.unlink()
             current_mask_file.unlink()
 
-            # Wait for 2 seconds before proceeding.
-            time.sleep(2)
+            # Wait for 1.5 seconds before proceeding.
+            time.sleep(1.5)
             continue
 
         # Need to dilate before plotting, this is only for visualization
