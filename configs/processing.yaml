@@ -1,6 +1,6 @@
 # This is my configuration file for processing raw data.
 
-# Please note: output_dir should not contain {resolution}_{size} 
+# Please note: output_dir should not contain {resolution}_{size}
 # as it will be added automatically by the processing script.
 
 tutorial_config:
