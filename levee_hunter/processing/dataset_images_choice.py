@@ -84,15 +84,16 @@ def interactive_images_selection(
             raise ValueError("file_ids_toprocess should be a list of strings.")
         if not isinstance(file_ids_toprocess[0], str):
             raise ValueError("file_ids_toprocess should be a list of strings.")
-
         # Filter tif files based on the file_ids_toprocess
         tif_files = [
             tif_file
             for tif_file in tif_files
-            if tif_file.stem.strip("_")[1] in file_ids_toprocess
+            if tif_file.stem.split("_")[1] in file_ids_toprocess
         ]
+        print(f"Found {len(tif_files)} images to process.")
+    else:
+        print(f"Found {len(tif_files)} images and {len(mask_files)} masks.")
 
-    print(f"Found {len(tif_files)} images and {len(mask_files)} masks.")
     print("\n ---------------Starting interactive images selection.--------------- \n")
     # Wait for 2 seconds before proceeding.
     time.sleep(2)
