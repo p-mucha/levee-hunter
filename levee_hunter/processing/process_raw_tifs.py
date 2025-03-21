@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 import rioxarray
 from tqdm import tqdm
+import warnings
 
 from levee_hunter.database_management import generate_file_id_from_name
 from levee_hunter.get_mask import get_mask
@@ -32,21 +33,26 @@ def main():
     print(
         "\n -------------------- Beginning processing pipeline -------------------- \n"
     )
-    print("Loaded configuration:", config)
+    print("Loaded configuration: ", config)
 
     resolution = config["resolution"]
     final_size = config["final_size"]
 
-    # find the project's root directory
-    root_dir = config["root_dir"]
-    if root_dir is None:
-        root_dir = find_project_root()
-        print("\n Root directory not specified. Using project root:", root_dir)
-    else:
-        root_dir = Path(root_dir)
+    # find the raw data directory, this is the firectory with the tif files
+    # in the config, for simplicity this should be a full path, but if it is not
+    # we will try to correct it based on the resolution
+    input_dir = Path(config["input_dir"])
+    if not input_dir.exists():
+        input_dir = find_project_root() / f"data/raw/{resolution}_resolution"
+        if input_dir.exists():
+            warnings.warn(
+                f'\nInput directory provided in config ({config["input_dir"]}) does not exist. Corrected based on resolution, to: {input_dir}'
+            )
+        else:
+            raise FileNotFoundError(
+                f"\nInput directory not found: {config['input_dir']}, also failed after changing to: {input_dir}"
+            )
 
-    # find the raw data directory
-    input_dir = root_dir / config["input_dir"]
     tif_files = [file for file in os.listdir(input_dir) if file.endswith(".tif")]
     if len(tif_files) == 0:
         print(f"\n No TIF files found in directory: {input_dir}. Exiting.")
@@ -54,11 +60,13 @@ def main():
     print(f"\n Found {len(tif_files)} tif files. \n")
 
     # load levees data
-    levees_path = config["levees_path"]
+    levees_path = Path(config["levees_path"])
     if levees_path is None:
-        levees_path = root_dir / "data/raw/levees/levees.gpkg"
+        levees_path = find_project_root() / "data/raw/levees/levees.gpkg"
+        warnings.warn(
+            f"\nLevees file not specified in config. Using default levees file: {levees_path}"
+        )
 
-    levees_path = Path(levees_path)
     # check if levees file exists
     if not levees_path.exists():
         raise FileNotFoundError(f"Levees file not found: {levees_path}")
@@ -137,23 +145,24 @@ def main():
         # if output_dir is specified, then save the images and masks there
         if config["output_dir"] is not None:
             images_dir = (
-                root_dir
-                / Path(config["output_dir"])
-                / f"{resolution}_{final_size}/images"
+                Path(config["output_dir"]) / f"{resolution}_{final_size}/images"
             )
-            masks_dir = (
-                root_dir
-                / Path(config["output_dir"])
-                / f"{resolution}_{final_size}/masks"
-            )
+            masks_dir = Path(config["output_dir"]) / f"{resolution}_{final_size}/masks"
         else:
             # Default option if None
             # Inside intermediate, there will be directory for dataset at given {resolution}_{final_size}
             # Inside this directory, there will be images and masks directory
             images_dir = (
-                root_dir / f"data/intermediate/{resolution}_{final_size}/images"
+                find_project_root()
+                / f"data/intermediate/{resolution}_{final_size}/images"
             )
-            masks_dir = root_dir / f"data/intermediate/{resolution}_{final_size}/masks"
+            masks_dir = (
+                find_project_root()
+                / f"data/intermediate/{resolution}_{final_size}/masks"
+            )
+            warnings.warn(
+                f"\nOutput directory not specified in config. Using default: {images_dir.parent}"
+            )
 
         # Create directories if they do not exist
         images_dir.mkdir(parents=True, exist_ok=True)
