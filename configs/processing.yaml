@@ -13,7 +13,7 @@
   # If null, will assume it is root_dir / "data/raw/levees/levees.gpkg".
   levees_path: "/share/gpu5/pmucha/fathom/levee-hunter/data/raw/levees/levees.gpkg"
 
-  # This should be the full path to the output directory. 
+  # This should be the full path to the output directory.
   # code will create {resolution}_{size} subdirectory in this directory, with images and masks subdirectories.
   output_dir: "/share/gpu5/pmucha/fathom/levee-hunter/data/intermediate/tutorial_data"
 
@@ -37,7 +37,7 @@
   # Mask configuration: Set mask_type to null if not used. Other options are currently: 'dilated', 'gaussian'.
   mask_type: null
 
-  # Dilation size (10 is the default value). 
+  # Dilation size (10 is the default value).
   # Does not matter if mask_type is null, but best to set to default value.
   dilation_size: 10
 
@@ -49,11 +49,11 @@
 "13_636":
   description: "Configuration for processing 1/3 resolution raw data. Results in no pixels loss."
 
-  input_dir: "/share/gpu5/ucapmgb/data/raw/13_resolution_original"
+  input_dir: "/share/gpu5/ucapmgb/levee-hunter/data/raw/13_resolution_original"
 
-  levees_path: "/share/gpu5/pmucha/fathom/levee-hunter/data/raw/levees/levees.gpkg"
+  levees_path: "/share/gpu5/ucapmgb/levee-hunter/data/raw/levees/levees.gpkg"
 
-  output_dir: "/share/gpu5/ucapmgb/data/intermediate/"
+  output_dir: "/share/gpu5/ucapmgb/levee-hunter/data/intermediate/"
 
   resolution: "13"
 
