@@ -1,5 +1,5 @@
 import torch
-from matplotlib.colors import ListedColormap
+from matplotlib.colors import ListedColormap, PowerNorm
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
@@ -337,12 +337,13 @@ def plot_img_and_target(img, target, figsize=(12, 6), cmap="viridis"):
 
 
 def plot_img_and_target_overlay(
-    original_img,
-    target_img,
-    figsize=(12, 4),
-    cmap="viridis",
-    invert=True,
-):
+    original_img: np.ndarray | torch.Tensor,
+    target_img: np.ndarray | torch.Tensor,
+    figsize: tuple = (12, 4),
+    cmap: str = "viridis",
+    invert: bool = True,
+    powernorm_threshold: float = None,
+) -> None:
     """
     Plots the original image and an overlay of the target mask.
 
@@ -352,6 +353,7 @@ def plot_img_and_target_overlay(
     - figsize: Figure size.
     - cmap: Colormap for the original image.
     - invert: If True, the target mask is inverted (1 - target) before overlay.
+    - powernorm_threshold: If not None, the image will be powerscaled if the range of values is higher than the threshold.
     """
     fig, (ax0, ax1) = plt.subplots(1, 2, figsize=figsize)
 
@@ -359,8 +361,23 @@ def plot_img_and_target_overlay(
     if isinstance(original_img, torch.Tensor):
         original_img = original_img.cpu()
     orig = original_img.squeeze()
-    im0 = ax0.imshow(orig, cmap=cmap)
-    ax0.set_title("Original Image")
+
+    # Powerscale allows to change the scale if range is high
+    # user can set powernorm_threshold, if range of values on
+    # the image is higher than the threshold, then the image
+    # will be powerscaled for better visibility. Only works if not None
+    if powernorm_threshold is not None:
+        norm = PowerNorm(gamma=0.5, vmin=orig.min().item(), vmax=orig.max().item())
+        if orig.max().item() - orig.min().item() > powernorm_threshold:
+            im0 = ax0.imshow(orig, norm=norm, cmap=cmap)
+            ax0.set_title("Original Image (PowerNorm)")
+        else:
+            im0 = ax0.imshow(orig, cmap=cmap)
+            ax0.set_title("Original Image")
+    else:
+        im0 = ax0.imshow(orig, cmap=cmap)
+        ax0.set_title("Original Image")
+
     ax0.axis("off")
 
     # Process the target image: if it's a tensor, move to CPU and convert to numpy, then squeeze
