@@ -8,7 +8,6 @@ import rioxarray
 from tqdm import tqdm
 import warnings
 
-from levee_hunter.database_management import generate_file_id_from_name
 from levee_hunter.get_mask import get_mask
 from levee_hunter.paths import find_project_root
 from levee_hunter.processing.processing_utils import (
@@ -137,10 +136,10 @@ def main():
         # First for current file we get an unique ID.
         # Then every smaller image will be named based on its index and current ID
         # for example 0th image from the list of smaller images will be named as 0_current_ID.tif
-        # Where current_ID will be something like: 'c067e80f74'
+        # Where current_ID will be something like: 'USGS_13_n34w083_20230215'
         # The masks will not store geo information, so we can save them as numpy arrays
         # so they will have the same name but different format: 0_current_ID.npy
-        current_file_id = generate_file_id_from_name(current_tif_file)
+        current_file_id = Path(current_tif_file).stem
 
         # if output_dir is specified, then save the images and masks there
         if config["output_dir"] is not None:
@@ -173,9 +172,8 @@ def main():
             current_image = smaller_images[i]
             current_mask = smaller_targets[i]
 
-            current_image.rio.to_raster(images_dir / f"{i}_{current_file_id}.tif")
-
-            np.save(masks_dir / f"{i}_{current_file_id}.npy", current_mask)
+            current_image.rio.to_raster(images_dir / f"{current_file_id}_p{i}.tif")
+            np.save(masks_dir / f"{current_file_id}_p{i}.npy", current_mask)
 
     print(f"\n Processing Finished. \n Saved images and masks at {images_dir.parent}")
 
