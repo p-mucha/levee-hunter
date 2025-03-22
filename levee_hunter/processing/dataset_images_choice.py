@@ -19,6 +19,7 @@ def interactive_images_selection(
     cmap: str = "viridis",
     plot_overlay: bool = True,
     file_ids_toprocess: list = None,
+    powernorm_threshold: float = None,
 ) -> None:
     """
     Allows the user to interactively select images to keep, remove, or mark as special.
@@ -32,6 +33,7 @@ def interactive_images_selection(
     - plot_overlay: bool, if false, will plot mask next to the image, if true, will plot image and next to it, the image
         with the target pixels overlayed.
     - file_ids_toprocess: list, list of file IDs to process. If None, all files will be processed.
+    - powernorm_threshold: float, if not None, the image plot will be powerscaled if the range of values is higher than the threshold.
 
     Outputs:
     - None, saves the selected images to the output directory.
@@ -174,6 +176,7 @@ def interactive_images_selection(
                 figsize=figsize,
                 cmap=cmap,
                 invert=True,
+                powernorm_threshold=powernorm_threshold,
             )
 
         else:
