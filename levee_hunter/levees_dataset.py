@@ -77,9 +77,9 @@ class LeveesDataset(Dataset):
         # Loop over all image paths, if w1 in filename, append 1, else append 2
         weights = []
         for file_path in self.img_paths:
-            if "w1" in file_path.name:
+            if "w1" in file_path.stem.split("_")[-1]:
                 weights.append(1)
-            elif "w2" in file_path.name:
+            elif "w2" in file_path.stem.split("_")[-1]:
                 weights.append(2)
             else:
                 raise ValueError(f"Filename {file_path.name} does not contain w1 or w2")
