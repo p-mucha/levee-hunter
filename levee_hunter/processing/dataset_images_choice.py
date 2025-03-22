@@ -87,10 +87,13 @@ def interactive_images_selection(
         if not isinstance(file_ids_toprocess[0], str):
             raise ValueError("file_ids_toprocess should be a list of strings.")
         # Filter tif files based on the file_ids_toprocess
+        # tif_file.stem.split('_')[:-1] gives the parts before _p{index}.
+        # (this assumes there is no weighting added yet, which should be true for intermediate data)
+        # so we join these parts and check if they are in the file_ids_toprocess
         tif_files = [
             tif_file
             for tif_file in tif_files
-            if tif_file.stem.split("_")[1] in file_ids_toprocess
+            if "_".join(tif_file.stem.split("_")[:-1]) in file_ids_toprocess
         ]
         print(f"Found {len(tif_files)} images to process.")
     else:
