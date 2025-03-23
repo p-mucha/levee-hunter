@@ -133,7 +133,20 @@ class LeveesDataset(Dataset):
 
         The file ID will be 4e7e7d0aed (always between two _)
         """
-        return [img_path.stem.split("_")[1] for img_path in self.img_paths]
+
+        # if not weighted, it might not end with w1 or w2
+        # but we check, (assuming all images are either weighted or not)
+        # we check if the first one ends with w1 or w2
+        # if not, then it ends with _p{index}.tif so
+        # we split by _ and take all but the last element
+        # if it is either weighted or ends with w1 or w2, then those ifs are not passed
+        # we go to the final return and this time take all but the last two elements
+        if not self.weighted:
+            first_tif_file = self.img_paths[0]
+            weight_suffix = ["w1", "w2"]
+            if not first_tif_file.stem.split("_")[-1] in weight_suffix:
+                return ["_".join(img_path.stem.split("_")[:-1]) for img_path in self.img_paths]
+        return ["_".join(img_path.stem.split('_')[:-2]) for img_path in self.img_paths]
 
     def __load_image(
         self, idx: int, values_only: bool = True
