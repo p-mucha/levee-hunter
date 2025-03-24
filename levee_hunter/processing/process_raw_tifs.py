@@ -56,6 +56,18 @@ def main():
     if len(tif_files) == 0:
         print(f"\n No TIF files found in directory: {input_dir}. Exiting.")
         sys.exit(0)
+
+    # Sometimes I was getting an error about some .tifs not recognised
+    # as a supported format, so we are gonna filter those out
+    valid_files = []
+    for tif_file in tif_files:
+        try:
+            _ = rioxarray.open_rasterio(str(tif_file))
+            valid_files.append(tif_file)
+        except Exception as e:
+            warnings.warn(f"Skipping {tif_file} due to error: {e}")
+    tif_files = valid_files
+
     print(f"\n Found {len(tif_files)} tif files. \n")
 
     # load levees data
