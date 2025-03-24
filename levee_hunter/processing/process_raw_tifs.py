@@ -62,13 +62,15 @@ def main():
     valid_files = []
     for tif_file in tif_files:
         try:
-            _ = rioxarray.open_rasterio(str(tif_file))
+            _ = rioxarray.open_rasterio(str(input_dir / tif_file))
             valid_files.append(tif_file)
         except Exception as e:
             warnings.warn(f"Skipping {tif_file} due to error: {e}")
-    tif_files = valid_files
 
-    print(f"\n Found {len(tif_files)} tif files. \n")
+    print(
+        f"\n Found {len(valid_files)} valid tif files out of {len(tif_files)} in total. \n"
+    )
+    tif_files = valid_files
 
     # load levees data
     levees_path = Path(config["levees_path"])
