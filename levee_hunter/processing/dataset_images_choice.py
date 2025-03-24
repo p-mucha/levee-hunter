@@ -4,6 +4,7 @@ import numpy as np
 from pathlib import Path
 import rioxarray
 import time
+from typing import Callable, Optional
 import warnings
 
 from levee_hunter.plots import plot_img_and_target, plot_img_and_target_overlay
@@ -17,9 +18,11 @@ def interactive_images_selection(
     dilation_size: int = 10,
     figsize: tuple = (12, 6),
     cmap: str = "viridis",
-    plot_overlay: bool = True,
+    plot: str = "overlay",
     file_ids_toprocess: list = None,
     powernorm_threshold: float = None,
+    store_bad_bounds: bool = False,
+    helper: Optional[Callable[[np.ndarray, np.ndarray], None]] = None,
 ) -> None:
     """
     Allows the user to interactively select images to keep, remove, or mark as special.
@@ -30,10 +33,12 @@ def interactive_images_selection(
     - dilation_size: int, size of the dilation kernel, Visualisation ONLY.
     - figsize: tuple, size of the figure.
     - cmap: str, colormap to use for plotting.
-    - plot_overlay: bool, if false, will plot mask next to the image, if true, will plot image and next to it, the image
-        with the target pixels overlayed.
+    - plot: str, options are: None, 'overlay', 'side_by_side'.
     - file_ids_toprocess: list, list of file IDs to process. If None, all files will be processed.
     - powernorm_threshold: float, if not None, the image plot will be powerscaled if the range of values is higher than the threshold.
+    - store_bad_bounds: bool, if True, will store the bounds of the images that were not selected in a separate file named bad_bounds.txt.
+    - helper: a function that takes in the image and mask (1, H, W) and does something with it.
+        For print warning if image is in bad_bounds.txt, or use model to help see missing levees.
 
     Outputs:
     - None, saves the selected images to the output directory.
@@ -150,6 +155,15 @@ def interactive_images_selection(
             tif_img=current_img_5070, bounds_file=bounds_file_path, threshold=10
         )
 
+        # if this option is selected, similarly to bounds of good images,
+        # we also store bounds of rejected images
+        # note: only rejected by the user, if overlap check not passed, then
+        # it is not stored.
+        if store_bad_bounds:
+            bad_bounds_file_path = output_dir / "bad_bounds.txt"
+            if not bad_bounds_file_path.exists():
+                bad_bounds_file_path.touch()
+
         # if there is overlap, skip this image, go to next loop iteration
         # (next tig file)
         if no_overlap == False:
@@ -171,25 +185,36 @@ def interactive_images_selection(
         print(f"Progress: {i+1}/{len(tif_files)} \n")
         print(f"Currently Processing: {current_tif_file}")
 
-        # -------------------------------- Plotting Here --------------------------------
-        if plot_overlay:
-            plot_img_and_target_overlay(
-                original_img=current_img.values.squeeze(),
-                target_img=current_mask.squeeze(),
-                figsize=figsize,
-                cmap=cmap,
-                invert=True,
-                powernorm_threshold=powernorm_threshold,
-            )
+        if helper is not None:
+            # current_img and current_mask have shapes (1, H, W) currently
+            helper(current_img.values, current_mask)
 
+        # -------------------------------- Plotting Here --------------------------------
+        if plot is not None:
+            if plot not in ["overlay", "side_by_side"]:
+                raise ValueError("plot should be either 'overlay' or 'side_by_side'.")
+            if plot == "overlay":
+                plot_img_and_target_overlay(
+                    original_img=current_img.values.squeeze(),
+                    target_img=current_mask.squeeze(),
+                    figsize=figsize,
+                    cmap=cmap,
+                    invert=True,
+                    powernorm_threshold=powernorm_threshold,
+                )
+            elif plot == "side_by_side":
+                # plot them side by side
+                plot_img_and_target(
+                    current_img.values.squeeze(),
+                    current_mask.squeeze(),
+                    figsize=figsize,
+                    cmap=cmap,
+                )
         else:
-            # plot them side by side
-            plot_img_and_target(
-                current_img.values.squeeze(),
-                current_mask.squeeze(),
-                figsize=figsize,
-                cmap=cmap,
-            )
+            if helper is None:
+                warnings.warn(
+                    "No plotting function provided. Either set the plot or helper arguments."
+                )
 
         # Add an extra plt.pause to ensure previous figures are removed
         plt.pause(0.15)  # Small pause to let Jupyter process figure update
@@ -260,6 +285,9 @@ def interactive_images_selection(
             update_bounds_file(bounds_file_path, current_img_5070)
 
         elif user_input == "remove" or user_input == "d":
+            if store_bad_bounds:
+                update_bounds_file(bad_bounds_file_path, current_img_5070)
+
             # remove file and go to the next one
             current_tif_file.unlink()
             current_mask_file.unlink()
