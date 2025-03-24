@@ -30,6 +30,7 @@ def validation_split(
     indices_to_move = np.where(np.isin(all_file_ids, file_ids))[0]
     indices_to_keep = np.where(~np.isin(all_file_ids, file_ids))[0]
 
+    # ----------------- Handle the validation dataset -----------------
     # create a validation dataset object based on the original one
     validation_dataset = LeveesDataset(
         images_dir=dataset.images_dir,
@@ -37,8 +38,6 @@ def validation_split(
         transform="normalize_only",
         weighted=dataset.weighted,
     )
-
-    # ----------------- Handle the validation dataset -----------------
     # The images, masks and weights are the ones that are at indices indices_to_move
     validation_dataset.img_paths = [
         validation_dataset.img_paths[i] for i in indices_to_move
@@ -53,14 +52,27 @@ def validation_split(
         ]
 
     # ----------------- Handle the train_test dataset -----------------
+    # create a train_test dataset object based on the original one
+    train_test_dataset = LeveesDataset(
+        images_dir=dataset.images_dir,
+        masks_dir=dataset.masks_dir,
+        transform=dataset.transform,
+        weighted=dataset.weighted,
+    )
     # We don't want to double the images, so we remove the images that we moved to the validation set
-    dataset.img_paths = [dataset.img_paths[i] for i in indices_to_keep]
-    dataset.mask_paths = [dataset.mask_paths[i] for i in indices_to_keep]
+    train_test_dataset.img_paths = [
+        train_test_dataset.img_paths[i] for i in indices_to_keep
+    ]
+    train_test_dataset.mask_paths = [
+        train_test_dataset.mask_paths[i] for i in indices_to_keep
+    ]
 
-    if dataset.weighted:
-        dataset.weights = [dataset.weights[i] for i in indices_to_keep]
+    if train_test_dataset.weighted:
+        train_test_dataset.weights = [
+            train_test_dataset.weights[i] for i in indices_to_keep
+        ]
 
-    return dataset, validation_dataset
+    return train_test_dataset, validation_dataset
 
 
 def train_test_split_dataset(dataset, test_size=0.2):
@@ -79,9 +91,12 @@ def train_test_split_dataset(dataset, test_size=0.2):
     if not isinstance(dataset, LeveesDataset):
         raise ValueError("Input dataset must be a LeveesDataset instance")
 
-    # Set the transform for the training dataset
-    dataset.transform = "train_transform"
+    indices = np.arange(len(dataset))
+    train_idx, test_idx = train_test_split(
+        indices, test_size=test_size, random_state=42, shuffle=True
+    )
 
+    # ----------------- Handle the test dataset -----------------
     # create a test dataset object based on the original one
     test_dataset = LeveesDataset(
         images_dir=dataset.images_dir,
@@ -89,13 +104,6 @@ def train_test_split_dataset(dataset, test_size=0.2):
         transform="normalize_only",
         weighted=dataset.weighted,
     )
-
-    indices = np.arange(len(dataset))
-    train_idx, test_idx = train_test_split(
-        indices, test_size=test_size, random_state=42, shuffle=True
-    )
-
-    # ----------------- Handle the test dataset -----------------
     # The images, masks and weights are the ones that are at indices indices_to_move
     test_dataset.img_paths = [test_dataset.img_paths[i] for i in test_idx]
     test_dataset.mask_paths = [test_dataset.mask_paths[i] for i in test_idx]
@@ -104,11 +112,17 @@ def train_test_split_dataset(dataset, test_size=0.2):
         test_dataset.weights = [test_dataset.weights[i] for i in test_idx]
 
     # ----------------- Handle the train dataset -----------------
+    train_dataset = LeveesDataset(
+        images_dir=dataset.images_dir,
+        masks_dir=dataset.masks_dir,
+        transform="train_transform",
+        weighted=dataset.weighted,
+    )
     # We don't want to double the images, so we remove the images that we moved to the validation set
-    dataset.img_paths = [dataset.img_paths[i] for i in train_idx]
-    dataset.mask_paths = [dataset.mask_paths[i] for i in train_idx]
+    train_dataset.img_paths = [train_dataset.img_paths[i] for i in train_idx]
+    train_dataset.mask_paths = [train_dataset.mask_paths[i] for i in train_idx]
 
-    if dataset.weighted:
-        dataset.weights = [dataset.weights[i] for i in train_idx]
+    if train_dataset.weighted:
+        train_dataset.weights = [train_dataset.weights[i] for i in train_idx]
 
-    return dataset, test_dataset
+    return train_dataset, test_dataset
