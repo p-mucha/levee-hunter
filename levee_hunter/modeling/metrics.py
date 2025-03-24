@@ -423,7 +423,9 @@ def get_custom_stats(targets, predictions, d, d_merge):
     return tp_array, fp_array, fn_array
 
 
-def custom_metrics(targets, predictions, d: int = 13, d_merge: int = 20):
+def custom_metrics(
+    targets, predictions, d: int = 13, d_merge: int = 20, print_tp_fp_fn: bool = False
+):
     tp, fp, fn = get_custom_stats(
         targets=targets, predictions=predictions, d=d, d_merge=d_merge
     )
@@ -439,6 +441,10 @@ def custom_metrics(targets, predictions, d: int = 13, d_merge: int = 20):
     print(f"F1 Score (Dice):   {f1_score:.4f}")
     print(f"Recall:            {recall:.4f}")
     print("------------------------------------------------------------")
+
+    if print_tp_fp_fn:
+        print(f"TP: {tp.item()}, FP: {fp.item()}, FN: {fn.item()}")
+        print("------------------------------------------------------------")
 
 
 def standard_metrics(targets, predictions, threshold: float = 0.5):
