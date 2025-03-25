@@ -422,3 +422,55 @@ def plot_training_validation_loss(train_loss_list, val_loss_list):
     plt.legend()
     plt.grid(True)
     plt.show()
+
+
+def plot_overlayed_img_mask_pred(
+    image,
+    mask,
+    pred,
+    figsize: tuple = (12, 6),
+    cmap: str = "viridis",
+    invert: bool = True,
+):
+    fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=figsize)
+
+    im0 = ax0.imshow(image.squeeze(), cmap=cmap)
+    ax0.set_title("Original Image")
+    ax0.axis("off")
+
+    if invert:
+        pred = 1 - pred
+        mask = 1 - mask
+
+    masked_mask = np.ma.masked_where(mask < 0.5, mask)
+    ax1.imshow(image.squeeze(), cmap=cmap)
+    ax1.imshow(
+        masked_mask, cmap="coolwarm", alpha=1, vmin=0, vmax=1
+    )  # Only where pred >= 0.5
+    ax1.set_title("Mask Overlay")
+    ax1.axis("off")
+
+    pred = pred.squeeze()
+    masked_pred = np.ma.masked_where(pred < 0.5, pred)
+    ax2.imshow(image.squeeze(), cmap=cmap)
+    ax2.imshow(
+        masked_pred, cmap="Oranges", alpha=1, vmin=0, vmax=2
+    )  # Only where pred >= 0.5
+    ax2.set_title("Prediction Overlay")
+    ax2.axis("off")
+
+    # -- Manually add a colorbar axis that does NOT shrink ax0 --
+    # Get the position of ax0 in figure coordinates
+    pos = ax0.get_position()  # (x0, y0, width, height)
+
+    # place the colobar: just to the right of ax0
+    x_cbar = pos.x0 + pos.width + 0.005  # chosen manually
+    y_cbar = pos.y0
+    cbar_width = 0.01
+    cbar_height = pos.height
+
+    # Create a new axis for the colorbar
+    cax = fig.add_axes([x_cbar, y_cbar, cbar_width, cbar_height])
+
+    # Draw the colorbar in this new axis
+    fig.colorbar(im0, cax=cax)
