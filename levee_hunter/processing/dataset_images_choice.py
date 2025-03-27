@@ -6,6 +6,7 @@ import rioxarray
 import time
 from typing import Callable, Optional
 import warnings
+import xarray
 
 from levee_hunter.plots import plot_img_and_target, plot_img_and_target_overlay
 from levee_hunter.processing.apply_mask_type import apply_mask_type
@@ -22,7 +23,8 @@ def interactive_images_selection(
     file_ids_toprocess: list = None,
     powernorm_threshold: float = None,
     store_bad_bounds: bool = False,
-    helper: Optional[Callable[[np.ndarray, np.ndarray], None]] = None,
+    store_bad_images: bool = False,
+    helper: Optional[Callable[[xarray.DataArray, np.ndarray], None]] = None,
 ) -> None:
     """
     Allows the user to interactively select images to keep, remove, or mark as special.
@@ -37,7 +39,8 @@ def interactive_images_selection(
     - file_ids_toprocess: list, list of file IDs to process. If None, all files will be processed.
     - powernorm_threshold: float, if not None, the image plot will be powerscaled if the range of values is higher than the threshold.
     - store_bad_bounds: bool, if True, will store the bounds of the images that were not selected in a separate file named bad_bounds.txt.
-    - helper: a function that takes in the image and mask (1, H, W) and does something with it.
+    - store_bad_images: bool, if True, will store the images that were rejected in a directory named bad_images, masks in bad_masks.
+    - helper: a function that takes in the rioxarray image and np.ndarray mask both (1, H, W), returns None.
         For print warning if image is in bad_bounds.txt, or use model to help see missing levees.
 
     Outputs:
@@ -187,7 +190,7 @@ def interactive_images_selection(
 
         if helper is not None:
             # current_img and current_mask have shapes (1, H, W) currently
-            helper(current_img.values, current_mask)
+            helper(current_img, current_mask)
 
         # -------------------------------- Plotting Here --------------------------------
         if plot is not None:
@@ -288,10 +291,30 @@ def interactive_images_selection(
             if store_bad_bounds:
                 update_bounds_file(bad_bounds_file_path, current_img_5070)
 
-            # remove file and go to the next one
-            current_tif_file.unlink()
-            current_mask_file.unlink()
-            pass  # do nothing, skip this image, do not update bounds
+            # if store_bad_images, move the current img and mask to bad_images and bad_masks
+            # else delete them
+            if store_bad_images:
+                output_bad_images_dir = output_dir / "bad_images"
+                output_bad_masks_dir = output_dir / "bad_masks"
+
+                output_bad_images_dir.mkdir(parents=True, exist_ok=True)
+                output_bad_masks_dir.mkdir(parents=True, exist_ok=True)
+
+                bad_tif_output = (
+                    output_bad_images_dir
+                    / f"{current_tif_file.stem}_w1{current_tif_file.suffix}"
+                )
+                bad_mask_output = (
+                    output_bad_masks_dir
+                    / f"{current_mask_file.stem}_w1{current_mask_file.suffix}"
+                )
+
+                current_tif_file.rename(bad_tif_output)
+                current_mask_file.rename(bad_mask_output)
+
+            else:
+                current_tif_file.unlink()
+                current_mask_file.unlink()
 
         else:
             print("Invalid input. Please try again.")
