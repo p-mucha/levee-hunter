@@ -223,99 +223,106 @@ def interactive_images_selection(
         plt.pause(0.15)  # Small pause to let Jupyter process figure update
         # --------------------------------------------------------------------------------
 
-        # Ask user
-        user_input = (
-            input(
-                f"Part {i+1}/{len(tif_files)} - [keep / special / remove / quit] -> (a / w / d / q)? "
-            )
-            .strip()
-            .lower()
-        )
-
         output_images_dir = output_dir / "images"
         output_masks_dir = output_dir / "masks"
 
-        if user_input == "q" or user_input == "quit":
-            return
-
-        elif user_input == "keep" or user_input == "a":
-            print("Moved to processed")
-            # Ensure the "images" subdirectory exists.
-            output_images_dir.mkdir(parents=True, exist_ok=True)
-            # Construct the new filename by appending "_w1" before the extension.
-            tif_output = (
-                output_images_dir
-                / f"{current_tif_file.stem}_w1{current_tif_file.suffix}"
+        while True:
+            # Ask user
+            user_input = (
+                input(
+                    f"Part {i+1}/{len(tif_files)} - [keep / special / remove / quit] -> (a / w / d / q)? "
+                )
+                .strip()
+                .lower()
             )
 
-            # Ensure the "masks" subdirectory exists.
-            output_masks_dir.mkdir(parents=True, exist_ok=True)
-            # Construct the new filename by appending "_w1" before the extension.
-            mask_output = (
-                output_masks_dir
-                / f"{current_mask_file.stem}_w1{current_mask_file.suffix}"
-            )
+            if user_input == "q" or user_input == "quit":
+                return
 
-            current_tif_file.rename(tif_output)
-            current_mask_file.rename(mask_output)
-
-            # Update the bounds file with the new bounds
-            update_bounds_file(bounds_file_path, current_img_5070)
-
-        elif user_input == "special" or user_input == "w":
-            print("Moved to processed, with weight 2")
-            # Ensure the "images" subdirectory exists.
-            output_images_dir.mkdir(parents=True, exist_ok=True)
-            # Construct the new filename by appending "_w1" before the extension.
-            tif_output = (
-                output_images_dir
-                / f"{current_tif_file.stem}_w2{current_tif_file.suffix}"
-            )
-
-            # Ensure the "masks" subdirectory exists.
-            output_masks_dir.mkdir(parents=True, exist_ok=True)
-            # Construct the new filename by appending "_w1" before the extension.
-            mask_output = (
-                output_masks_dir
-                / f"{current_mask_file.stem}_w2{current_mask_file.suffix}"
-            )
-
-            # Move the files to processed
-            current_tif_file.rename(tif_output)
-            current_mask_file.rename(mask_output)
-
-            # Update the bounds file with the new bounds
-            update_bounds_file(bounds_file_path, current_img_5070)
-
-        elif user_input == "remove" or user_input == "d":
-            if store_bad_bounds:
-                update_bounds_file(bad_bounds_file_path, current_img_5070)
-
-            # if store_bad_images, move the current img and mask to bad_images and bad_masks
-            # else delete them
-            if store_bad_images:
-                output_bad_images_dir = output_dir / "bad_images"
-                output_bad_masks_dir = output_dir / "bad_masks"
-
-                output_bad_images_dir.mkdir(parents=True, exist_ok=True)
-                output_bad_masks_dir.mkdir(parents=True, exist_ok=True)
-
-                bad_tif_output = (
-                    output_bad_images_dir
+            elif user_input == "keep" or user_input == "a":
+                print("Moved to processed")
+                # Ensure the "images" subdirectory exists.
+                output_images_dir.mkdir(parents=True, exist_ok=True)
+                # Construct the new filename by appending "_w1" before the extension.
+                tif_output = (
+                    output_images_dir
                     / f"{current_tif_file.stem}_w1{current_tif_file.suffix}"
                 )
-                bad_mask_output = (
-                    output_bad_masks_dir
+
+                # Ensure the "masks" subdirectory exists.
+                output_masks_dir.mkdir(parents=True, exist_ok=True)
+                # Construct the new filename by appending "_w1" before the extension.
+                mask_output = (
+                    output_masks_dir
                     / f"{current_mask_file.stem}_w1{current_mask_file.suffix}"
                 )
 
-                current_tif_file.rename(bad_tif_output)
-                current_mask_file.rename(bad_mask_output)
+                current_tif_file.rename(tif_output)
+                current_mask_file.rename(mask_output)
+
+                # Update the bounds file with the new bounds
+                update_bounds_file(bounds_file_path, current_img_5070)
+
+                break  # break the while loop
+
+            elif user_input == "special" or user_input == "w":
+                print("Moved to processed, with weight 2")
+                # Ensure the "images" subdirectory exists.
+                output_images_dir.mkdir(parents=True, exist_ok=True)
+                # Construct the new filename by appending "_w1" before the extension.
+                tif_output = (
+                    output_images_dir
+                    / f"{current_tif_file.stem}_w2{current_tif_file.suffix}"
+                )
+
+                # Ensure the "masks" subdirectory exists.
+                output_masks_dir.mkdir(parents=True, exist_ok=True)
+                # Construct the new filename by appending "_w1" before the extension.
+                mask_output = (
+                    output_masks_dir
+                    / f"{current_mask_file.stem}_w2{current_mask_file.suffix}"
+                )
+
+                # Move the files to processed
+                current_tif_file.rename(tif_output)
+                current_mask_file.rename(mask_output)
+
+                # Update the bounds file with the new bounds
+                update_bounds_file(bounds_file_path, current_img_5070)
+
+                break  # break the while loop
+
+            elif user_input == "remove" or user_input == "d":
+                if store_bad_bounds:
+                    update_bounds_file(bad_bounds_file_path, current_img_5070)
+
+                # if store_bad_images, move the current img and mask to bad_images and bad_masks
+                # else delete them
+                if store_bad_images:
+                    output_bad_images_dir = output_dir / "bad_images"
+                    output_bad_masks_dir = output_dir / "bad_masks"
+
+                    output_bad_images_dir.mkdir(parents=True, exist_ok=True)
+                    output_bad_masks_dir.mkdir(parents=True, exist_ok=True)
+
+                    bad_tif_output = (
+                        output_bad_images_dir
+                        / f"{current_tif_file.stem}_w1{current_tif_file.suffix}"
+                    )
+                    bad_mask_output = (
+                        output_bad_masks_dir
+                        / f"{current_mask_file.stem}_w1{current_mask_file.suffix}"
+                    )
+
+                    current_tif_file.rename(bad_tif_output)
+                    current_mask_file.rename(bad_mask_output)
+
+                else:
+                    current_tif_file.unlink()
+                    current_mask_file.unlink()
+
+                break  # break the while loop
 
             else:
-                current_tif_file.unlink()
-                current_mask_file.unlink()
-
-        else:
-            print("Invalid input. Please try again.")
-            continue  # re-prompt the same part
+                print("Invalid input. Please try again.")
+                continue  # re-prompt the same part
