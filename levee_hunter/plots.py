@@ -1,94 +1,245 @@
-import torch
+from matplotlib.axes import Axes
 from matplotlib.colors import ListedColormap, PowerNorm
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
+from typing import List, Union
+import warnings
+
 
 from levee_hunter.modeling.inference import infer
 
 
-def infer_and_visualize_old(
-    model,
-    image_tensor,
-    mask_tensor,
-    apply_sigmoid=True,
-    threshold=0.5,
-    device=None,
-    figsize=(12, 4),
+def plot_training_validation_loss(
+    train_loss_list: List[float], val_loss_list: List[float], figsize: tuple = (8, 5)
+) -> None:
+    # Plot training and validation loss
+    epochs_range = range(1, len(train_loss_list) + 1)
+
+    plt.figure(figsize=figsize)
+    plt.plot(epochs_range, train_loss_list, label="Train Loss")
+    plt.plot(epochs_range, val_loss_list, label="Validation Loss")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.title("Training and Validation Loss over Epochs")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
+# -------------------------- Helper Functions to the Main plot() Function Below -------------------------- #
+
+
+def plot_original_img(
+    ax: Axes,
+    image: Union[np.ndarray, torch.Tensor],
+    cmap: str = "viridis",
+    powernorm_threshold: float = None,
 ):
-
-    model.eval()
-
-    # Convert image to tensor if it is not already
-    if not isinstance(image_tensor, torch.Tensor):
-        image_tensor = torch.Tensor(image_tensor)
-
-    # Convert image to tensor if it is not already
-    if not isinstance(mask_tensor, torch.Tensor):
-        mask_tensor = torch.Tensor(mask_tensor)
-
-    if device is not None:
-        image_tensor = image_tensor.to(device)
-
-    if apply_sigmoid:
-        with torch.no_grad():
-            output = model(image_tensor.unsqueeze(0))
-            output = torch.sigmoid(output).cpu().squeeze().numpy()
-            output = (output > threshold).astype(np.uint8)
+    img_scale = image.max().item() - image.min().item()
+    if powernorm_threshold is not None and img_scale > powernorm_threshold:
+        norm = PowerNorm(gamma=0.5, vmin=image.min().item(), vmax=image.max().item())
+        im = ax.imshow(image, norm=norm, cmap=cmap)
+        ax.set_title("Original Image (PowerNorm)")
     else:
-        with torch.no_grad():
-            output = model(image_tensor.unsqueeze(0))
-            output = output.squeeze().cpu().numpy()
+        im = ax.imshow(image, cmap=cmap)
+        ax.set_title("Original Image")
+    ax.axis("off")
+    return im
 
-    # Original Image
-    # At this point this is tensor of shape (1, N, N)
-    # Squeeze the tensor
-    # Also it might be on cuda, for plotting we move to cpu
-    # Otherwise, matplotlib will throw an error
-    fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=figsize)
 
-    # Left image
-    im0 = ax0.imshow(image_tensor.cpu().squeeze(), cmap="viridis")
-    ax0.set_title("Original Image")
-    ax0.axis("off")
+def plot_mask(ax: Axes, mask: Union[np.ndarray, torch.Tensor]) -> None:
+    if mask is None:
+        ax.text(0.5, 0.5, "Mask not provided", fontsize=12, ha="center", va="center")
+    else:
+        ax.imshow(mask, cmap=ListedColormap(["black", "white"]), vmin=0, vmax=1)
+        ax.set_title("Mask")
+    ax.axis("off")
 
-    # Prediction
-    ax1.imshow(output, cmap=ListedColormap(["white", "black"]), vmin=0, vmax=1)
-    ax1.set_title("Prediction")
-    ax1.axis("off")
 
-    # Target Mask
-    ax2.imshow(
-        mask_tensor.cpu().squeeze(),
-        cmap=ListedColormap(["white", "black"]),
-        vmin=0,
-        vmax=1,
-    )
-    ax2.set_title("Target Mask")
-    ax2.axis("off")
+def plot_pred(ax: Axes, pred: Union[np.ndarray, torch.Tensor]) -> None:
+    if pred is None:
+        ax.text(
+            0.5, 0.5, "Prediction not provided", fontsize=12, ha="center", va="center"
+        )
+    else:
+        ax.imshow(pred, cmap=ListedColormap(["black", "white"]), vmin=0, vmax=1)
+        ax.set_title("Prediction")
+    ax.axis("off")
 
-    # -- Manually add a colorbar axis that does NOT shrink ax0 --
-    # Get the position of ax0 in figure coordinates
-    pos = ax0.get_position()  # (x0, y0, width, height)
 
-    # Decide where to place the colorbar: just to the right of ax0
-    x_cbar = pos.x0 + pos.width + 0.005  # 0.01 is a small gap
-    y_cbar = pos.y0
-    cbar_width = 0.01
-    cbar_height = pos.height
+def plot_image_pred_overlay(ax, image, pred, cmap="viridis") -> None:
+    if pred is None:
+        ax.text(
+            0.5, 0.5, "Prediction not provided", fontsize=12, ha="center", va="center"
+        )
+    else:
+        masked_pred = np.ma.masked_where(pred < 0.5, pred)
+        ax.imshow(image, cmap=cmap)
+        ax.imshow(masked_pred, cmap="Oranges", alpha=1, vmin=0, vmax=2)
+        ax.set_title("Image with Prediction Overlay")
+    ax.axis("off")
 
-    # Create a new axis for the colorbar
-    cax = fig.add_axes([x_cbar, y_cbar, cbar_width, cbar_height])
 
-    # Draw the colorbar in this new axis
-    fig.colorbar(im0, cax=cax)
+def plot_image_mask_overlay(ax, image, mask, cmap="viridis"):
+    if mask is None:
+        ax.text(0.5, 0.5, "Mask not provided", fontsize=12, ha="center", va="center")
+    else:
+        masked_mask = np.ma.masked_where(mask < 0.5, mask)
+        ax.imshow(image, cmap=cmap)
+        ax.imshow(masked_mask, cmap="coolwarm", alpha=1, vmin=0, vmax=1)
+        ax.set_title("Image with Mask Overlay")
+    ax.axis("off")
+
+
+def plot_pred_mask_overlay(ax, image, mask, pred, cmap="viridis"):
+    if mask is None:
+        ax.text(0.5, 0.5, "Mask not provided", fontsize=12, ha="center", va="center")
+    else:
+        masked_pred = np.ma.masked_where(pred < 0.5, pred)
+        masked_mask = np.ma.masked_where(mask < 0.5, mask)
+        gray_bg = np.full_like(image, 0.75)
+        ax.imshow(gray_bg, cmap="gray", vmin=0, vmax=1)
+        ax.imshow(masked_mask, cmap="coolwarm", alpha=0.6, vmin=0, vmax=1)
+        ax.imshow(masked_pred, cmap="Oranges", alpha=0.6, vmin=0, vmax=2)
+        ax.set_title("Prediction & Mask Overlay")
+    ax.axis("off")
+
+
+def plot_predicted_pixels(ax, image, pred, cmap="viridis"):
+    # Threshold 0.5 to find pixels selected as target
+    masked_pred = np.ma.masked_where(pred > 0.5, pred)
+
+    ax.imshow(image, cmap=cmap)
+    ax.imshow(
+        masked_pred, cmap="Grays", alpha=1, vmin=-1, vmax=2
+    )  # Only where pred >= 0.5
+    ax.set_title("Image's Pixels Classified as Target")
+    ax.axis("off")
+
+
+def plot(
+    image: Union[np.ndarray, torch.Tensor] = None,
+    mask: Union[np.ndarray, torch.Tensor] = None,
+    pred: Union[np.ndarray, torch.Tensor] = None,
+    plot_types: List[str] = None,
+    figsize: tuple = (15, 5),
+    cmap: str = "viridis",
+    inverted: bool = True,
+    powernorm_threshold: float = None,
+):
+    """
+    Accepts np.ndarray or torch.Tensor for image, mask, and pred. Performs squeezing, so will accept shapes like:
+    (1, H, W), or (1, 1, H, W) or (H, W).
+
+    Inputs need to match plot_types, eg if user selects "image" and "mask", then image and mask cannot be None.
+
+    Inputs:
+    - image: the original image. np.ndarray or torch.Tensor, at shape (H, W) or (1, H, W) or (1, 1, H, W)
+    - mask: the ground truth mask. np.ndarray or torch.Tensor, at shape (H, W) or (1, H, W) or (1, 1, H, W)
+    - pred: the predicted mask. np.ndarray or torch.Tensor, at shape (H, W) or (1, H, W) or (1, 1, H, W)
+    - plot_types: list of strings, each string is a type of plot to show. Options are:
+        - "image": original image
+        - "mask": ground truth mask
+        - "pred": predicted mask
+        - "image_pred_overlay": original image with prediction overlay
+        - "image_mask_overlay": original image with mask overlay
+        - "pred_mask_overlay": predicted mask with ground truth mask overlay
+        - "predicted_pixels": pixels classified as target in the original image
+    - figsize: size of the figure
+    - cmap: colormap to use for the original image
+    - inverted: whether to invert the mask and prediction (1 - mask/pred), select True if target pixels are 0s and background are 1s.
+    - powernorm_threshold: if the image's scale is greater than this, use PowerNorm for the original image
+
+    Outputs:
+    - None, but shows the plots in a matplotlib figure.
+    """
+
+    if plot_types is None:
+        plot_types = ["image"]
+
+    def process_image(img: Union[np.ndarray, torch.Tensor]):
+        if img is None:
+            return None
+        if isinstance(img, torch.Tensor):
+            img = img.cpu().numpy()
+        return img.squeeze()
+
+    # Process the images once so they're ready to use
+    image = process_image(image)
+    mask = process_image(mask)
+    pred = process_image(pred)
+
+    if inverted:
+        if mask is not None:
+            mask = 1 - mask
+        if pred is not None:
+            pred = 1 - pred
+
+    n = len(plot_types)
+    fig, axes = plt.subplots(1, n, figsize=figsize)
+    if n == 1:
+        axes = [axes]
+
+    # Mapping plot type names to functions using lambda to pass the processed images.
+    PLOT_FUNCTIONS = {
+        "image": lambda ax: plot_original_img(ax, image, cmap, powernorm_threshold),
+        "mask": lambda ax: plot_mask(ax, mask),
+        "pred": lambda ax: plot_pred(ax, pred),
+        "image_pred_overlay": lambda ax: plot_image_pred_overlay(ax, image, pred, cmap),
+        "image_mask_overlay": lambda ax: plot_image_mask_overlay(ax, image, mask, cmap),
+        "pred_mask_overlay": lambda ax: plot_pred_mask_overlay(
+            ax, image, mask, pred, cmap
+        ),
+        "predicted_pixels": lambda ax: plot_predicted_pixels(ax, image, pred, cmap),
+    }
+
+    im0 = None
+    for ax, plot_type in zip(axes, plot_types):
+        func = PLOT_FUNCTIONS.get(plot_type)
+        if func and plot_type == "image":
+            im0 = func(ax)
+
+        elif func:
+            func(ax)
+
+        else:
+            ax.text(
+                0.5,
+                0.5,
+                f"Plot type '{plot_type}' not recognized",
+                ha="center",
+                va="center",
+            )
+            ax.axis("off")
+
+    if "image" in plot_types:
+        # Get the position of ax0 in figure coordinates
+        pos = axes[0].get_position()  # (x0, y0, width, height)
+
+        # Place the colorbar: just to the right of axes[0]
+        x_cbar = pos.x0 + pos.width + 0.005  # chosen manually
+        y_cbar = pos.y0
+        cbar_width = 0.01
+        cbar_height = pos.height
+
+        # Create a new axis for the colorbar
+        cax = fig.add_axes([x_cbar, y_cbar, cbar_width, cbar_height])
+
+        # Draw the colorbar in this new axis
+        fig.colorbar(im0, cax=cax)
 
     plt.show()
 
-    return output
+
+# -------------------------- Deprecated Functions Below -------------------------- #
 
 
 def plot_prediction(original_img, pred_img, target_img, figsize=(12, 4)):
+    warnings.warn(
+        "This function is deprecated. Use the plot() with plot_types: image, pred, mask instead."
+    )
     fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=figsize)
 
     # Original Image
@@ -147,7 +298,7 @@ def plot_prediction(original_img, pred_img, target_img, figsize=(12, 4)):
 
 def infer_and_visualize(
     model,
-    image_tensor,
+    image,
     mask_tensor,
     apply_sigmoid=True,
     threshold=0.5,
@@ -156,13 +307,13 @@ def infer_and_visualize(
 ):
     pred_img = infer(
         model=model,
-        image_tensor=image_tensor,
+        image=image,
         device=device,
         apply_sigmoid=apply_sigmoid,
         threshold=threshold,
     )
     plot_prediction(
-        original_img=image_tensor,
+        original_img=image,
         pred_img=pred_img,
         target_img=mask_tensor,
         figsize=figsize,
@@ -180,6 +331,9 @@ def plot_prediction_overlap(
     legend=False,
     invert=True,
 ):
+    warnings.warn(
+        "This function is deprecated. Use the plot() with plot_types: image, image_pred_overlay, pred_mask_overlay instead."
+    )
     fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=figsize)
     # Original Image
     # At this point this might be a tensor of shape (1, N, N)
@@ -282,6 +436,9 @@ def infer_and_plot_overlap(
 
 
 def plot_selected_pixels(original_img, pred_img, figsize=(6, 6), invert=True):
+    warnings.warn(
+        "This function is deprecated. Use the plot() with plot_types: predicted_pixels"
+    )
     if isinstance(original_img, torch.Tensor):
         original_img = original_img.cpu()
 
@@ -307,6 +464,9 @@ def plot_selected_pixels(original_img, pred_img, figsize=(6, 6), invert=True):
 
 
 def plot_img_and_target(img, target, figsize=(12, 6), cmap="viridis"):
+    warnings.warn(
+        "This function is deprecated. Use the plot() with plot_types: image, mask instead."
+    )
     if img.shape[0] == 1:
         img = img.squeeze()
 
@@ -355,6 +515,10 @@ def plot_img_and_target_overlay(
     - invert: If True, the target mask is inverted (1 - target) before overlay.
     - powernorm_threshold: If not None, the image will be powerscaled if the range of values is higher than the threshold.
     """
+    warnings.warn(
+        "This function is deprecated. Use the plot() with plot_types: image, image_mask_overlay instead."
+    )
+
     fig, (ax0, ax1) = plt.subplots(1, 2, figsize=figsize)
 
     # Process the original image: if it's a tensor, move to CPU and squeeze
@@ -409,21 +573,6 @@ def plot_img_and_target_overlay(
     plt.show()
 
 
-def plot_training_validation_loss(train_loss_list, val_loss_list):
-    # Plot training and validation loss
-    epochs_range = range(1, len(train_loss_list) + 1)
-
-    plt.figure(figsize=(8, 5))
-    plt.plot(epochs_range, train_loss_list, label="Train Loss")
-    plt.plot(epochs_range, val_loss_list, label="Validation Loss")
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss")
-    plt.title("Training and Validation Loss over Epochs")
-    plt.legend()
-    plt.grid(True)
-    plt.show()
-
-
 def plot_overlayed_img_mask_pred(
     image,
     mask,
@@ -432,6 +581,10 @@ def plot_overlayed_img_mask_pred(
     cmap: str = "viridis",
     invert: bool = True,
 ):
+
+    warnings.warn(
+        "This function is deprecated. Use the plot() with plot_types: image, image_mask_overlay, image_pred_overlay instead."
+    )
     fig, (ax0, ax1, ax2) = plt.subplots(1, 3, figsize=figsize)
 
     im0 = ax0.imshow(image.squeeze(), cmap=cmap)
