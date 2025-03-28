@@ -1,52 +1,63 @@
 import numpy as np
 import torch
+from torch import nn
+from typing import Union, Optional
 
 
-def infer(model, image_tensor, device=None, apply_sigmoid=True, threshold=0.5):
+def infer(
+    model: nn.Module,
+    image: Union[np.ndarray, torch.Tensor],
+    device: Optional[Union[str, torch.device]] = None,
+    apply_sigmoid: bool = True,
+    threshold: float = 0.5,
+):
     """
-    Run inference on the given image_tensor using the model and device.
-    Returns the model's output as a numpy array on the CPU.
+    Run inference on the given image or images using the model and device.
+    Recommended input shape: (N, C, H, W).
+    Returns the model's output as a numpy array on the CPU, shape (N, C, H, W).
 
-    Expected input:
-      - Single image: shape (C, H, W)
-      - Multiple images: shape (N, C, H, W)
+    Inputs:
+    - model: The PyTorch model to use for inference. We use segmentation_models.pytorch.
+    - image: The input image to run inference on. Can be np.array or torch.Tensor, recommended shape is (N, C, H, W).
+    - device: The device to run the model on. If None, it will use 'cuda' if available, otherwise 'cpu'.
+    - apply_sigmoid: Whether to apply sigmoid activation to the model's output.
+    - threshold: The threshold to use for binarizing the output. Default is 0.5.
 
-    If a single image is passed, the function adds a batch dimension.
+    Outputs:
+    - output: The model's output as a numpy array on the CPU, always will have shape (N, C, H, W).
+        eg For simgle image and one channel: (1, 1, H, W).
     """
+
+    # Ensure we are in evaluation mode
     model.eval()
 
-    # Convert to tensor if necessary
-    if not isinstance(image_tensor, torch.Tensor):
-        image_tensor = torch.tensor(image_tensor)
+    if not isinstance(image, torch.Tensor):
+        image = torch.tensor(image, dtype=torch.float32)
 
     # If the tensor is 2D, assume it's a grayscale image and add a channel dimension
-    if len(image_tensor.shape) == 2:
-        image_tensor = image_tensor.unsqueeze(0)
+    if len(image.shape) == 2:
+        image = image.unsqueeze(0)
 
     # If the tensor is 3D, assume it's (C, H, W) for a single image, so add a batch dimension
-    if len(image_tensor.shape) == 3:
-        image_tensor = image_tensor.unsqueeze(0)
+    if len(image.shape) == 3:
+        image = image.unsqueeze(0)
 
     # Determine device if not provided
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # Move the image tensor to the device
-    image_tensor = image_tensor.to(device)
+    # Move the image to the device
+    image = image.to(device)
 
     with torch.no_grad():
-        # Now image_tensor is shape (N, C, H, W)
-        output = model(image_tensor)
+        # Now image is now a torch.Tensor with shape (N, C, H, W)
+        output = model(image)
         if apply_sigmoid:
             output = torch.sigmoid(output)
             output = (output > threshold).float()
 
     # Move the output back to CPU
     output = output.cpu().numpy()
-
-    # Optionally, if you want to squeeze out singleton dimensions from a single image
-    if output.shape[0] == 1:
-        output = output.squeeze(0)
 
     return output
 
