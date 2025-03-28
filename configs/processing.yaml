@@ -130,3 +130,31 @@
   gaussian_sigma: 5
 
   ##########################################################################################
+
+"1m_2048":
+  description: "Configuration for processing 1m resolution raw data."
+
+  input_dir: "/share/gpu5/pmucha/fathom/levee-hunter/data/raw/1m_resolution"
+
+  levees_path: "/share/gpu5/pmucha/fathom/levee-hunter/data/raw/levees/levees.gpkg"
+
+  output_dir: "/share/gpu5/pmucha/fathom/levee-hunter/data/intermediate/larger"
+
+  resolution: "1m"
+
+  # Final size of the images after splitting.
+  final_size: 2048
+
+  overlap: 0
+
+  keep_empty: 0.2
+
+  invert: true
+
+  mask_type: null
+
+  dilation_size: 10
+
+  gaussian_sigma: 5
+
+  ##########################################################################################
