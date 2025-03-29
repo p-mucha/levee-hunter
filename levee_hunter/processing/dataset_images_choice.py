@@ -4,11 +4,11 @@ import numpy as np
 from pathlib import Path
 import rioxarray
 import time
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 import warnings
 import xarray
 
-from levee_hunter.plots import plot_img_and_target, plot_img_and_target_overlay
+from levee_hunter.plotting import plot
 from levee_hunter.processing.apply_mask_type import apply_mask_type
 from levee_hunter.processing.processing_utils import filter_single_image_by_overlap
 
@@ -19,7 +19,7 @@ def interactive_images_selection(
     dilation_size: int = 10,
     figsize: tuple = (12, 6),
     cmap: str = "viridis",
-    plot: str = "overlay",
+    plot_types: List[str] = ["image", "image_mask_overlay"],
     file_ids_toprocess: list = None,
     powernorm_threshold: float = None,
     store_bad_bounds: bool = False,
@@ -193,26 +193,17 @@ def interactive_images_selection(
             helper(current_img, current_mask)
 
         # -------------------------------- Plotting Here --------------------------------
-        if plot is not None:
-            if plot not in ["overlay", "side_by_side"]:
-                raise ValueError("plot should be either 'overlay' or 'side_by_side'.")
-            if plot == "overlay":
-                plot_img_and_target_overlay(
-                    original_img=current_img.values.squeeze(),
-                    target_img=current_mask.squeeze(),
-                    figsize=figsize,
-                    cmap=cmap,
-                    invert=True,
-                    powernorm_threshold=powernorm_threshold,
-                )
-            elif plot == "side_by_side":
-                # plot them side by side
-                plot_img_and_target(
-                    current_img.values.squeeze(),
-                    current_mask.squeeze(),
-                    figsize=figsize,
-                    cmap=cmap,
-                )
+        if plot_types is not None:
+            plot(
+                image=current_img.values,
+                mask=current_mask,
+                pred=None,
+                plot_types=plot_types,
+                figsize=figsize,
+                cmap=cmap,
+                inverted=True,
+                powernorm_threshold=powernorm_threshold,
+            )
         else:
             if helper is None:
                 warnings.warn(
