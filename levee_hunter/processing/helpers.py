@@ -6,7 +6,7 @@ from typing import Callable
 import warnings
 import xarray
 
-from levee_hunter.plots import plot_overlayed_img_mask_pred
+from levee_hunter.plotting import plot
 from levee_hunter.modeling.inference import infer
 from levee_hunter.modeling.metrics import custom_metrics
 from levee_hunter.augmentations import TRANSFORMS
@@ -26,13 +26,14 @@ def model_helper(image: xarray.DataArray, mask: np.ndarray, model: nn.Module) ->
     model = model.to(device)
 
     output = infer(
-        model, image_tensor=aug_image, device=device, apply_sigmoid=True, threshold=0.5
+        model, image=aug_image, device=device, apply_sigmoid=True, threshold=0.5
     )
 
-    plot_overlayed_img_mask_pred(
+    plot(
         image=aug_image,
         mask=aug_mask,
         pred=output,
+        plot_types=["image", "image_mask_overlay", "image_pred_overlay"],
         figsize=(15, 9),
         cmap="viridis",
         invert=True,
@@ -57,17 +58,19 @@ def model_helper_custom_metrics(
     model = model.to(device)
 
     output = infer(
-        model, image_tensor=aug_image, device=device, apply_sigmoid=True, threshold=0.5
+        model, image=aug_image, device=device, apply_sigmoid=True, threshold=0.5
     )
 
-    plot_overlayed_img_mask_pred(
+    plot(
         image=aug_image,
         mask=aug_mask,
         pred=output,
+        plot_types=["image", "image_mask_overlay", "image_pred_overlay"],
         figsize=(15, 9),
         cmap="viridis",
         invert=True,
     )
+
     custom_metrics(
         targets=1 - aug_mask.reshape(1, *aug_mask.shape),
         predictions=1 - output,
