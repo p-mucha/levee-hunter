@@ -156,6 +156,7 @@ def plot(
     - None, but shows the plots in a matplotlib figure.
     """
 
+    # default to plotting only the image
     if plot_types is None:
         plot_types = ["image"]
 
@@ -166,23 +167,26 @@ def plot(
             img = img.cpu().numpy()
         return img.squeeze()
 
-    # Process the images once so they're ready to use
+    # Process the images, if tensors then move to cpu and convert to numpy
+    # squeeze to remove any extra dimensions
     image = process_image(image)
     mask = process_image(mask)
     pred = process_image(pred)
 
+    # invert image if target pixels are marked as 0 and background as 1
     if inverted:
         if mask is not None:
             mask = 1 - mask
         if pred is not None:
             pred = 1 - pred
 
+    # start plotting, we make n subplots
     n = len(plot_types)
     fig, axes = plt.subplots(1, n, figsize=figsize)
     if n == 1:
         axes = [axes]
 
-    # Mapping plot type names to functions using lambda to pass the processed images.
+    # Mapping plot type names to functions, pass the processed images.
     PLOT_FUNCTIONS = {
         "image": lambda ax: plot_original_img(ax, image, cmap, powernorm_threshold),
         "mask": lambda ax: plot_mask(ax, mask),
@@ -195,6 +199,19 @@ def plot(
         "predicted_pixels": lambda ax: plot_predicted_pixels(ax, image, pred, cmap),
     }
 
+    # check for invalid options in plot_types
+    # if there are any, raise an error and let user know what options are available
+    invalid_types = [pt for pt in plot_types if pt not in PLOT_FUNCTIONS]
+    if invalid_types:
+        valid_options = ", ".join(PLOT_FUNCTIONS.keys())
+        raise ValueError(
+            f"Invalid plot type(s): {invalid_types}. Available options are: {valid_options}"
+        )
+
+    # im0 is to make adding colorbar possible, and to add it only to the original image
+    # usually image will be first from the left hence the name im0, but it will work
+    # even if that is not the case. the plot_original_img function therefore is the only
+    # one that outputs something, and it outputs the im object.
     im0 = None
     for ax, plot_type in zip(axes, plot_types):
         func = PLOT_FUNCTIONS.get(plot_type)
@@ -214,6 +231,7 @@ def plot(
             )
             ax.axis("off")
 
+    # handle colorbar ig image is in plot_types
     if "image" in plot_types:
         # Get the position of ax0 in figure coordinates
         pos = axes[0].get_position()  # (x0, y0, width, height)
