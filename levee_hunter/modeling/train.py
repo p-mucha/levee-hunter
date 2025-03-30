@@ -71,7 +71,7 @@ def train_model(
             # the average over images should be weighted
             # loss.shape = (batch_size, 1, H, W), so to average over pixels
             # we can take mean with dim=(2,3) argument, this results in
-            # loss.shapr = (batch_size, 1), so to multiply by weights we need to
+            # loss.shape = (batch_size, 1), so to multiply by weights we need to
             # reshape with .view(-1, 1). Then to get weighted average we sum the loss
             # and divide over sum of weights
             # Loss is then just a scalar for which we can then compute gradients with
@@ -89,6 +89,7 @@ def train_model(
             train_loss += loss.item()
 
         model.eval()
+        total_samples = 0
         val_loss = 0.0
         with torch.no_grad():
             for batch in val_loader:
@@ -98,12 +99,16 @@ def train_model(
                 output = model(images)
                 loss = criterion(output, mask)  # Standard loss for validation
 
-                loss = loss.mean()  # as we use reduction='none'
+                if len(loss.shape) == 4:
+                    # loss shape is (batch_size, 1, H, W); average over pixels per image
+                    loss = loss.mean(dim=(2, 3))  # now shape (batch_size, 1)
 
-                val_loss += loss.item()
+                batch_size = images.shape[0]
+                total_samples += batch_size
+                val_loss += loss.sum().item()
 
         train_loss /= len(train_loader)
-        val_loss /= len(val_loader)
+        val_loss /= total_samples
 
         train_loss_list.append(train_loss)
         val_loss_list.append(val_loss)

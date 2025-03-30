@@ -6,8 +6,9 @@ import rioxarray
 import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
-from typing import Tuple
+from typing import overload, Tuple
 import warnings
+import xarray as xr
 
 from levee_hunter.augmentations import TRANSFORMS
 from levee_hunter.processing.apply_mask_type import apply_mask_type
@@ -129,9 +130,9 @@ class LeveesDataset(Dataset):
         Get the file IDs from the image paths.
 
         Eg for image path:
-        /share/gpu5/pmucha/fathom/levee-hunter/data/processed/tutorial_data/1m_544/images/0_4e7e7d0aed_w1.tif
+        /share/gpu5/pmucha/fathom/levee-hunter/data/processed/1m_1024/images/USGS_1M_10_x51y506_OR_OLCMetro_2019_A19_p5_w1.tif
 
-        The file ID will be 4e7e7d0aed (always between two _)
+        The file ID will be USGS_1M_10_x51y506_OR_OLCMetro_2019_A19 (always before _p{index})
         """
 
         # if not weighted, it might not end with w1 or w2
@@ -145,12 +146,23 @@ class LeveesDataset(Dataset):
             first_tif_file = self.img_paths[0]
             weight_suffix = ["w1", "w2"]
             if not first_tif_file.stem.split("_")[-1] in weight_suffix:
-                return ["_".join(img_path.stem.split("_")[:-1]) for img_path in self.img_paths]
-        return ["_".join(img_path.stem.split('_')[:-2]) for img_path in self.img_paths]
+                return [
+                    "_".join(img_path.stem.split("_")[:-1])
+                    for img_path in self.img_paths
+                ]
+        return ["_".join(img_path.stem.split("_")[:-2]) for img_path in self.img_paths]
 
+    @overload
     def __load_image(
-        self, idx: int, values_only: bool = True
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        self, idx: int, values_only: True
+    ) -> Tuple[np.ndarray, np.ndarray]: ...
+
+    @overload
+    def __load_image(
+        self, idx: int, values_only: False
+    ) -> Tuple[xr.DataArray, np.ndarray]: ...
+
+    def __load_image(self, idx: int, values_only: bool = True):
         """
         Simply load in image and its mask.
         Since we sorted paths in __init__, we can just use idx to get the right image and mask.
@@ -174,7 +186,9 @@ class LeveesDataset(Dataset):
 
         return current_img, current_mask
 
-    def __perform_transform(self, image, mask):
+    def __perform_transform(
+        self, image: np.ndarray, mask: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Perform transformation on image and mask.
         Inputs should be 2d, but will attempt to squeeze them if not.
@@ -190,10 +204,10 @@ class LeveesDataset(Dataset):
 
         assert self.transform is not None, f"Transformation {self.transform} is None"
 
-        if len(image.shape) == 3:
+        if len(image.shape) > 2:
             image = image.squeeze()
 
-        if len(mask.shape) == 3:
+        if len(mask.shape) > 2:
             mask = mask.squeeze()
 
         # Perform augmentation.
@@ -276,6 +290,16 @@ class LeveesDataset(Dataset):
         return len(self.img_paths)
 
     def __getitem__(self, idx: int) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Given input idx, return image and mask both (1, H, W).
+
+        Inputs:
+        - idx: int, index of the image and mask to load
+
+        Outputs:
+        - current_img: image of shape (1, H, W)
+        - current_mask: mask of shape (1, H, W)
+        """
 
         # They are loaded in as (1, H, W), for augmentations we will flatten them
         current_img, current_mask = self.__load_image(idx, values_only=True)
