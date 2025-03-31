@@ -114,7 +114,9 @@ def validation_split(
     return train_dataset, validation_dataset
 
 
-def train_test_split_dataset(dataset, test_size=0.2):
+def train_test_split_dataset(
+    dataset: LeveesDataset, test_size: float = 0.2
+) -> Tuple[LeveesDataset, LeveesDataset]:
     """
     Splits a LeveesDataset into training and validation datasets.
 

@@ -58,7 +58,7 @@ def get_mask(
     # was extremely slow. I therefore decided to reproject the tif
     # instead. This is used to find levees in extent,
     # next we reproject those levees which should be fast as those should be
-    # a few levees usually. # <- those lines are affected by this temp fix
+    # a few levees usually. # <- those lines are affected by this fix
     if levees.crs != tif_image.rio.crs:
         tif_image_reprojected = tif_image.rio.reproject(levees.crs)  # <-
         extent_geom = tif_image_reprojected.rio.bounds()  # Bounds of the tif image # <-

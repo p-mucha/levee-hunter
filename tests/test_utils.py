@@ -1,4 +1,7 @@
-from levee_utils.utils import count_parameters
+from torch import nn
+
+from levee_hunter.utils import count_parameters
+
 
 def test_count_parameters():
     class SimpleNN(nn.Module):
@@ -12,8 +15,5 @@ def test_count_parameters():
             x = self.fc2(x)
             return x
 
-
     model = SimpleNN()
     assert count_parameters(model) == 13
-
-

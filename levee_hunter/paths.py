@@ -2,11 +2,13 @@ from pathlib import Path
 import string
 import re
 import torch
+from torch import nn
+from typing import Union
 import warnings
 
 
-def find_project_root(max_depth=4):
-    """Finds the root directory containing both 'models' and 'levee-hunter' directories.
+def find_project_root(max_depth: int = 4):
+    """Finds the root directory containing 'data', 'models' and 'levee_hunter' directories.
 
     Moves up in the directory structure until it finds both directories or reaches a limit.
 
@@ -22,9 +24,11 @@ def find_project_root(max_depth=4):
     for _ in range(max_depth):
         # Check if both 'models' and 'levee_hunter' exist in the current path
         # If they do, it means we are in the root directory
-        if (current_path / "models").is_dir() and (
-            current_path / "levee_hunter"
-        ).is_dir():
+        if (
+            (current_path / "models").is_dir()
+            and (current_path / "levee_hunter").is_dir()
+            and (current_path / "data").is_dir()
+        ):
             return current_path  # Found the root directory
 
         # Move up one level
@@ -37,15 +41,11 @@ def find_project_root(max_depth=4):
     return None  # If no valid root is found within `max_depth`
 
 
-def check_if_file_exists(file_path):
-    if file_path.exists():
-        return True
-    else:
-        return False
-
-
-def get_unique_model_path(base_path):
+def get_unique_model_path(base_path: Union[str, Path]) -> Path:
     """Generates a unique model path by appending A, B, C... if needed."""
+    if isinstance(base_path, str):
+        base_path = Path(base_path)
+
     base_dir = base_path.parent
     base_name = base_path.stem  # Remove .pth extension
     extension = base_path.suffix  # Get .pth extension
@@ -74,7 +74,7 @@ def get_unique_model_path(base_path):
     return base_dir / f"{base_name}_{next_number}{extension}"
 
 
-def save_model_correctly(model, save_model_path=None):
+def save_model_correctly(model: nn.Module, save_model_path: Union[str, Path] = None):
     """Saves a PyTorch model, either to a user-defined path or
        an automatically generated unique path, inside the models/ directory.
 

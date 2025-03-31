@@ -1,9 +1,8 @@
 import albumentations as A
 
-# Important Note:
+# Note:
 # When new transformation is added, it should be added to the TRANSFORMS dictionary below
-# There is no longer need to add it to __init__ of SegmentationDataset class
-
+# Note: augmentations work only with 2D numpy arrays, not with Torch tensors
 
 # Define augmentations
 train_transform = A.Compose(
