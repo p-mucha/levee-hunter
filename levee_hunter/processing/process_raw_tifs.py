@@ -111,9 +111,9 @@ def main():
         # The outputs is a tuple of two lists. First list holds the smaller images in the form of xarray.DataArray
         # and the second list holds the smaller masks in the form of numpy arrays.
         # smaller image and smaller target, both have shapes (1, H, W).
-        smaller_images, smaller_targets = split_images(
+        smaller_images, smaller_masks = split_images(
             images=current_img,
-            targets=mask,
+            masks=mask,
             final_size=config["final_size"],
             overlap=config["overlap"],
         )
@@ -123,8 +123,8 @@ def main():
             continue
 
         # remove invalid images and their corresponding masks
-        smaller_images, smaller_targets = remove_invalid_images(
-            images=smaller_images, targets=smaller_targets
+        smaller_images, smaller_masks = remove_invalid_images(
+            images=smaller_images, masks=smaller_masks
         )
 
         # If no valid patches remain after filtering, skip this tif file.
@@ -133,9 +133,9 @@ def main():
 
         # remove empty images and their corresponding masks, keep some fraction of empty images
         # determined by keep_empty parameter
-        smaller_images, smaller_targets = remove_empty_images(
+        smaller_images, smaller_masks = remove_empty_images(
             images=smaller_images,
-            targets=smaller_targets,
+            masks=smaller_masks,
             keep_empty=config["keep_empty"],
             inverted=config["invert"],
         )
@@ -184,7 +184,7 @@ def main():
         # Save the images and masks
         for i in range(len(smaller_images)):
             current_image = smaller_images[i]
-            current_mask = smaller_targets[i]
+            current_mask = smaller_masks[i]
 
             current_image.rio.to_raster(images_dir / f"{current_file_id}_p{i}.tif")
             np.save(masks_dir / f"{current_file_id}_p{i}.npy", current_mask)
