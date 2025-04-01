@@ -74,7 +74,7 @@ def get_preds_targets(model, val_loader, device, invert=True):
             # Note for some loaders batch_size is len(images)
             preds = infer(
                 model,
-                image_tensor=images,
+                image=images,
                 device=device,
                 apply_sigmoid=True,
                 threshold=threshold,
