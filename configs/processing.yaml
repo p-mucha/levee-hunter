@@ -74,8 +74,8 @@
   gaussian_sigma: 5
 
   ##########################################################################################
-"13_318":
-  description: "Configuration for processing 1/3 resolution raw data. Results in no pixels loss."
+"13_384":
+  description: "Configuration for processing 1/3 resolution raw data. Results in 60 pixels loss."
 
   input_dir: "/share/gpu5/ucapmgb/levee-hunter/data/raw/13_resolution_original"
 
@@ -86,8 +86,7 @@
   resolution: "13"
 
   # Final size of the images after splitting.
-  # For 1/3 arc second resolution, 318 splits the 10812 pixel image perfectly.
-  final_size: 318
+  final_size: 384
 
   overlap: 0
 
