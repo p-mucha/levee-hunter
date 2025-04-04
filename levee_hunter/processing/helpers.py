@@ -36,7 +36,7 @@ def model_helper(image: xarray.DataArray, mask: np.ndarray, model: nn.Module) ->
         plot_types=["image", "image_mask_overlay", "image_pred_overlay"],
         figsize=(15, 9),
         cmap="viridis",
-        invert=True,
+        inverted=True,
     )
 
     return None
@@ -68,7 +68,7 @@ def model_helper_custom_metrics(
         plot_types=["image", "image_mask_overlay", "image_pred_overlay"],
         figsize=(15, 9),
         cmap="viridis",
-        invert=True,
+        inverted=True,
     )
 
     custom_metrics(
