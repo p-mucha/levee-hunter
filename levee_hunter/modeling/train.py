@@ -42,6 +42,7 @@ def train_model(
     optimizer,
     criterion=nn.BCEWithLogitsLoss(reduction="none"),
     epochs=10,
+    suppress_output=False,
     save_model="best",
     save_model_path=None,
 ):
@@ -154,17 +155,20 @@ def train_model(
         train_loss_list.append(train_loss)
         test_loss_list.append(test_loss)
 
-        print(
-            f"Epoch: {epoch+1}/{epochs} Train Loss: {train_loss:.6f} Test Loss: {test_loss:.6f}"
-        )
-        print(
-            f"Train Levee Loss: {train_levee_loss:.6f} ({train_levee_count}) "
-            f"Train Non-Levee Loss: {train_nonlevee_loss:.6f} ({train_nonlevee_count})"
-        )
-        print(
-            f"Test Levee Loss: {test_levee_loss:.6f} ({test_levee_count}) "
-            f"Test Non-Levee Loss: {test_nonlevee_loss:.6f} ({test_nonlevee_count})"
-        )
+        if suppress_output:
+            pass
+        else:
+            print(
+                f"Epoch: {epoch+1}/{epochs} Train Loss: {train_loss:.6f} Test Loss: {test_loss:.6f}"
+            )
+            print(
+                f"Train Levee Loss: {train_levee_loss:.6f} ({train_levee_count}) "
+                f"Train Non-Levee Loss: {train_nonlevee_loss:.6f} ({train_nonlevee_count})"
+            )
+            print(
+                f"Test Levee Loss: {test_levee_loss:.6f} ({test_levee_count}) "
+                f"Test Non-Levee Loss: {test_nonlevee_loss:.6f} ({test_nonlevee_count})"
+            )
 
         if save_model == "best":
             if test_loss < best_loss:
