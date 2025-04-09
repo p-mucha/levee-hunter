@@ -244,39 +244,54 @@ def count_pred_pixels_within_distance(
     return within_distance
 
 
-def compute_avg_distance(
-    mask1: Union[np.ndarray, torch.Tensor], mask2: Union[np.ndarray, torch.Tensor]
-) -> float:
+def compute_distance_statistic(
+    mask1: Union[np.ndarray, torch.Tensor],
+    mask2: Union[np.ndarray, torch.Tensor],
+    statistic: str = "mean",  # can be "mean" or "sum"
+    return_length: bool = False,
+) -> Union[float, Tuple[float, int]]:
     """
-    Computes average Euclidean distance from mask1 to mask2.
-    Inputs:
-    - mask1: binary (0 for background and 1 for foreground) np.ndarray or torch.Tensor, accepted shapes: (H, W), (1, H, W), (1, 1, H, W)
-    - mask2: binary (0 for background and 1 for foreground) np.ndarray or torch.Tensor, accepted shapes: (H, W), (1, H, W), (1, 1, H, W)
+    Compute a distance statistic (average or sum) between two binary masks.
+    From mask1 to mask2.
 
-    Outputs:
-    - float: average distance from mask1 to mask2
+    Parameters:
+      mask1, mask2: Binary arrays (np.ndarray or torch.Tensor) in shapes (H, W), (1, H, W), or (1, 1, H, W)
+      statistic: 'mean' to compute the average distance, or 'sum' to compute the sum of distances.
+      return_length: If True, returns a tuple (statistic, number_of_valid_distances)
 
+    Returns:
+      The computed statistic, or (statistic, count) if return_length is True.
+
+    Note:
+      - If both masks have no foreground (all 0) the function returns 0.
+      - If one mask has no foreground and the other has some, the function returns np.inf.
     """
-
+    # Convert torch.Tensors to numpy arrays if needed.
     if isinstance(mask1, torch.Tensor):
         mask1 = mask1.cpu().numpy()
     if isinstance(mask2, torch.Tensor):
         mask2 = mask2.cpu().numpy()
 
-    # if both are 0 only, then we assume prediction is correct
-    # so output 0
-    # if one of them is 0, then we assume prediction is wrong
-    # so output inf
+    # Handle cases where masks are empty.
     if np.max(mask1) == 0 and np.max(mask2) == 0:
-        return 0.0
+        result = 0.0
+        distances = np.array([])
     elif np.max(mask1) == 0 or np.max(mask2) == 0:
-        return np.inf
+        result = np.inf
+        distances = np.array([])
+    else:
+        distances = get_distances(pred=mask1, gt_mask=mask2)
+        if statistic == "mean":
+            result = np.mean(distances)
+        elif statistic == "sum":
+            result = np.sum(distances)
+        else:
+            raise ValueError("statistic must be either 'mean' or 'sum'")
 
-    distances = get_distances(pred=mask1, gt_mask=mask2)
-
-    # Compute the average distance
-    avg_distance = np.mean(distances)
-    return avg_distance
+    if return_length:
+        return result, len(distances)
+    else:
+        return result
 
 
 def count_tp_fp(

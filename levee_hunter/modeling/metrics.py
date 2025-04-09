@@ -14,6 +14,7 @@ from levee_hunter.modeling.modeling_utils import (
     plot_skeletons,
     count_tp_fp,
     count_fn,
+    compute_distance_statistic,
 )
 
 
@@ -141,3 +142,44 @@ def standard_metrics(targets, predictions, threshold: float = 0.5):
     print(f"Accuracy:          {accuracy:.4f}")
     print(f"Recall:            {recall:.4f}")
     print("------------------------------------------------------------")
+
+
+def dist_both_ways_metric(
+    mask: Union[np.ndarray, torch.Tensor],
+    pred: Union[np.ndarray, torch.Tensor],
+) -> float:
+    dist1 = compute_distance_statistic(
+        mask1=mask, mask2=pred, statistic="mean", return_length=False
+    )
+    dist2 = compute_distance_statistic(
+        mask1=pred, mask2=mask, statistic="mean", return_length=False
+    )
+
+    return dist1 + dist2
+
+
+def distance_metric(
+    mask: Union[np.ndarray, torch.Tensor],
+    pred: Union[np.ndarray, torch.Tensor],
+) -> float:
+
+    dist_pred_to_gt, len_pred_to_gt = compute_distance_statistic(
+        mask1=pred, mask2=mask, statistic="sum", return_length=True
+    )
+    dist_gt_to_pred, len_gt_to_pred = compute_distance_statistic(
+        mask1=mask, mask2=pred, statistic="sum", return_length=True
+    )
+
+    # if both mask and pred are 0, compute_distance_statistic will return 0
+    # in both directions, we just output 0 then
+    if dist_pred_to_gt == 0 and dist_gt_to_pred == 0:
+        return 0.0
+
+    if dist_pred_to_gt == np.inf or dist_gt_to_pred == np.inf:
+        return np.inf
+
+    dist_diff = np.abs(dist_gt_to_pred - dist_pred_to_gt)
+
+    mean_dist_diff = dist_diff / np.abs(len_pred_to_gt - len_gt_to_pred)
+
+    return mean_dist_diff + dist_gt_to_pred / (len_gt_to_pred + len_pred_to_gt + 1e-6)
