@@ -69,7 +69,10 @@ class LeveesDataset(Dataset):
         if self.weighted:
             self.weights = self._compute_weights()
 
-    def apply_padding(self, num_px: int,)-> None:
+    def apply_padding(
+        self,
+        num_px: int,
+    ) -> None:
         """
         Check to apply padding to the images and masks. Images need to be divisible by 32
 
@@ -78,64 +81,66 @@ class LeveesDataset(Dataset):
         """
 
         # Warn the user about data overwriting
-        user_confirmation = input(f"WARNING: This operation will overwrite the original mask files in {self.masks_dir}. "
-                                  f"Ensure you have saved a backup if needed. "
-                                  f"Do you want to proceed? (yes/no): ")
-        
-        if user_confirmation.lower() != 'yes':
+        user_confirmation = input(
+            f"WARNING: This operation will overwrite the original mask files in {self.masks_dir}. "
+            f"Ensure you have saved a backup if needed. "
+            f"Do you want to proceed? (yes/no): "
+        )
+
+        if user_confirmation.lower() != "yes":
             print("Operation aborted by user.")
             return
 
         # Loop over all image paths, ensure dimensions are divisible by 32
         for file_path in tqdm(self.img_paths, desc="Padding images"):
             current_img = rioxarray.open_rasterio(str(file_path))
-            
+
             # Calculate padding needed for height and width to be divisible by 32
             image_height = current_img.rio.height
             image_width = current_img.rio.width
-            
+
             pad_height = (32 - image_height % 32) % 32
             pad_width = (32 - image_width % 32) % 32
-            
+
             if pad_height > 0 or pad_width > 0:
                 # Apply padding to make dimensions divisible by 32
                 current_img = current_img.pad(
-                    {"y": (pad_height, 0), "x": (0, pad_width)}, 
-                    mode="constant", 
-                    constant_values=-999
+                    {"y": (pad_height, 0), "x": (0, pad_width)},
+                    mode="constant",
+                    constant_values=-999,
                 )
             current_img.rio.to_raster(file_path)
 
         # Loop over all mask paths, ensure dimensions are divisible by 32
         for file_path in tqdm(self.mask_paths, desc="Padding masks"):
             current_mask = np.load(file_path)
-            
+
             # Get current dimensions
             if len(current_mask.shape) == 3:  # Shape is (C, H, W)
                 mask_height, mask_width = current_mask.shape[1:]
                 pad_height = (32 - mask_height % 32) % 32
                 pad_width = (32 - mask_width % 32) % 32
-                
+
                 if pad_height > 0 or pad_width > 0:
                     current_mask = np.pad(
-                    current_mask, 
-                    ((0, 0), (pad_height, 0), (0, pad_width)), 
-                    mode='constant', 
-                    constant_values=1 # False
+                        current_mask,
+                        ((0, 0), (pad_height, 0), (0, pad_width)),
+                        mode="constant",
+                        constant_values=1,  # False
                     )
             else:  # Shape is (H, W)
                 mask_height, mask_width = current_mask.shape
                 pad_height = (32 - mask_height % 32) % 32
                 pad_width = (32 - mask_width % 32) % 32
-                
+
                 if pad_height > 0 or pad_width > 0:
                     current_mask = np.pad(
-                    current_mask, 
-                    ((pad_height, 0), (0, pad_width)), 
-                    mode='constant', 
-                    constant_values=1 # False
+                        current_mask,
+                        ((pad_height, 0), (0, pad_width)),
+                        mode="constant",
+                        constant_values=1,  # False
                     )
-            
+
             # Save the modified mask back to the original path
             np.save(file_path, current_mask)
 
@@ -148,33 +153,33 @@ class LeveesDataset(Dataset):
         # Loop over all image paths, remove padding
         for file_path in tqdm(self.img_paths, desc="Removing padding from images"):
             current_img = rioxarray.open_rasterio(str(file_path))
-            
+
             # Get the current dimensions
             current_height = current_img.rio.height
             current_width = current_img.rio.width
-            
+
             if current_height > original_px or current_width > original_px:
                 # Keep only the bottom-left corner with original_px dimensions
                 # This removes padding from top and right sides
                 current_img = current_img.isel(
-                    y=slice(current_height-original_px, current_height),
-                    x=slice(0, original_px)
+                    y=slice(current_height - original_px, current_height),
+                    x=slice(0, original_px),
                 )
                 current_img.rio.to_raster(file_path)
 
         # Loop over all mask paths, remove padding
         for file_path in tqdm(self.mask_paths, desc="Removing padding from masks"):
             current_mask = np.load(file_path)
-            
+
             if len(current_mask.shape) == 3:  # Shape is (C, H, W)
                 # Keep only the bottom-left corner, removing padding from top and right
                 h = current_mask.shape[1]
-                current_mask = current_mask[:, h-original_px:h, :original_px]
+                current_mask = current_mask[:, h - original_px : h, :original_px]
             else:  # Shape is (H, W)
                 # Keep only the bottom-left corner, removing padding from top and right
                 h = current_mask.shape[0]
-                current_mask = current_mask[h-original_px:h, :original_px]
-            
+                current_mask = current_mask[h - original_px : h, :original_px]
+
             np.save(file_path, current_mask)
 
     def _compute_weights(self) -> list:
@@ -216,11 +221,13 @@ class LeveesDataset(Dataset):
         """
 
         # Warn the user about data overwriting
-        user_confirmation = input(f"WARNING: This operation will overwrite the original mask files in {self.masks_dir}. "
-                                  f"Ensure you have saved a backup if needed. "
-                                  f"Do you want to proceed? (yes/no): ")
-        
-        if user_confirmation.lower() != 'yes':
+        user_confirmation = input(
+            f"WARNING: This operation will overwrite the original mask files in {self.masks_dir}. "
+            f"Ensure you have saved a backup if needed. "
+            f"Do you want to proceed? (yes/no): "
+        )
+
+        if user_confirmation.lower() != "yes":
             print("Operation aborted by user.")
             return
 
@@ -240,6 +247,29 @@ class LeveesDataset(Dataset):
             )
 
             # Save the modified mask back to the original path.
+            np.save(current_mask_file, current_mask)
+
+    def invert_masks(self) -> None:
+        """
+        Invert the masks in the dataset.
+        This will change 0 to 1 and 1 to 0 in the masks.
+        """
+
+        # Warn the user about data overwriting
+        user_confirmation = input(
+            f"WARNING: This operation will overwrite the original mask files in {self.masks_dir}. "
+            f"Ensure you have saved a backup if needed. "
+            f"Do you want to proceed? (yes/no): "
+        )
+
+        if user_confirmation.lower() != "yes":
+            print("Operation aborted by user.")
+            return
+
+        # Loop over all mask paths, invert the masks
+        for current_mask_file in tqdm(self.mask_paths, desc="Inverting masks"):
+            current_mask = np.load(current_mask_file)
+            current_mask = 1 - current_mask
             np.save(current_mask_file, current_mask)
 
     @property

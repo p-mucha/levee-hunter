@@ -97,6 +97,10 @@ def get_preds_targets(model, val_loader, device, invert=True):
         all_targets = torch.tensor(1 - all_targets)
         all_preds = torch.tensor(1 - all_preds)
 
+    else:
+        all_targets = torch.tensor(all_targets)
+        all_preds = torch.tensor(all_preds)
+
     # Convert to integer type (0 or 1) to satisfy `get_stats` requirements
     all_preds = all_preds.long()
     all_targets = all_targets.long()
