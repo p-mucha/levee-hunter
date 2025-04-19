@@ -166,7 +166,7 @@ source /share/apps/anaconda/3-2022.05/etc/profile.d/conda.sh
 ```
 conda create -n [environment name] -c conda-forge mamba
 
-conda activate Fathom
+conda activate [environment name]
 ```
 3. **Find environment.yml**: Go to the directory where environment.yml is located. Here it is the root directory:
 ```
