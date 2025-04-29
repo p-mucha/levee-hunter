@@ -69,7 +69,7 @@ def get_preds_targets(model, val_loader, device, invert=True):
 
     model.eval()
     with torch.no_grad():
-        for images, masks in val_loader:
+        for images, masks, *_ in val_loader:
             # Shapes are (batch_size, 1, height, width) for both
             # Note for some loaders batch_size is len(images)
             preds = infer(
