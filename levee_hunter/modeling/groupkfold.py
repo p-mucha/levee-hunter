@@ -166,7 +166,7 @@ def GroupKFoldTraining(dataset,
       # Append to results list
       fold_results.append(fold_metrics)
       
-      print(f"\nFold {fold+1} metrics: \nDice={avg_dice:.4f}, \nIoU={avg_iou:.4f}, \nDistance={avg_distance:.4f}, \nVal Loss={val_losses[-1]:.4f}")
+      print(f"\nFold {fold+1} metrics: \nDice={avg_dice:.4f}, \nIoU={avg_iou:.4f}, \nDistance={avg_distance:.4f}, \nVal Loss={val_losses[-1]:.4f}\n\n")
 
    return fold_results, all_train_losses, all_val_losses, per_image_results
 

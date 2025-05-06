@@ -1,5 +1,7 @@
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader
 
 from levee_hunter.levees_dataset import LeveesDataset
 from levee_hunter.paths import save_model_correctly
@@ -186,3 +188,78 @@ def train_model(
     print(f"Trained {model_architecture} model with {encoder_name} encoder.")
 
     return model, train_loss_list, test_loss_list
+
+def train_final_model(
+        model,
+        full_dataset,
+        optimizer,
+        criterion=nn.BCEWithLogitsLoss(reduction="none"),
+        epochs=25,
+        batch_size=16,
+        save_model_path=None,
+        suppress_output=False,
+        plot_loss=False,
+):
+    """
+    Retrain the model on the full dataset using the best hyperparameters found in CV.
+
+    Args:
+        model (torch.nn.Module): Model to be trained.
+        full_dataset (Dataset): The complete dataset to use for final training in a dataloader.
+        batch_size (int): Batch size for training.
+        optimizer (torch.optim.Optimizer): Optimizer (e.g., Adam).
+        criterion (nn.Module): Loss function.
+        epochs (int): Number of training epochs.
+        save_model_path (str or Path, optional): Where to save the model.
+        suppress_output (bool): Suppress console output.
+    Returns:
+        Trained model.
+    """
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model.to(device)
+
+    loader = DataLoader(full_dataset, batch_size=batch_size, shuffle=True)
+
+    print(f"Retraining on full dataset with {len(full_dataset)} samples on device: {device}")
+
+    loss_list = []
+
+    for epoch in range(epochs):
+        model.train()
+        total_loss = 0.0
+        for batch in loader:
+            if full_dataset.weighted:
+                images, mask, weights = batch
+                images, mask, weights = images.to(device), mask.to(device), weights.to(device)
+            else:
+                images, mask = batch[:2]
+                images, mask = images.to(device), mask.to(device)
+                weights = torch.ones(mask.shape[0], device=device)
+
+            optimzer = optimizer
+            output = model(images)
+
+            loss = criterion(output, mask)
+            if len(loss.shape) == 4:
+                loss = loss.mean(dim=(2, 3))
+
+            loss = (loss * weights.view(-1, 1)).sum() / weights.sum()
+
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+
+        avg_loss = total_loss / len(loader)
+        loss_list.append(avg_loss)
+        if not suppress_output:
+            print(f"Epoch {epoch+1}/{epochs} - Average Loss: {avg_loss:.6f}")
+    if plot_loss:
+        plt.plot(loss_list)
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.title("Training Loss Over Epochs")
+        plt.show()
+
+    save_model_correctly(model, save_model_path)
+    return model
